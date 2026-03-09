@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Stock · Ferretería</title>
+    <!-- Bootstrap 5 + Iconos -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body { background: #f4f7fc; font-family: system-ui, -apple-system, 'Segoe UI', Roboto; }
+        .login-container { max-width: 400px; margin: 80px auto; }
+        .card-dashboard { border-radius: 1rem; border: none; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.08); }
+        .table-productos td, .table-movimientos td { vertical-align: middle; }
+        .cantidad-bajo-stock { background-color: #f8d7da !important; }
+        .clickable-row { cursor: pointer; }
+        .nav-link.active { font-weight: 600; }
+        .movimiento-entrada { color: #198754; font-weight: 500; }
+        .movimiento-salida { color: #dc3545; font-weight: 500; }
+        #mainApp { display: none; }
+        .footer-info { font-size: 0.85rem; color: #6c757d; }
+        .init-panel { background: #e9f0f9; border-radius: 0.5rem; padding: 0.75rem; margin-top: 2rem; }
+    </style>
+</head>
+<body>
+
+<!-- ==================== LOGIN / REGISTRO ==================== -->
+<div id="loginContainer" class="login-container">
+    <div class="card card-dashboard p-4">
+        <h3 class="text-center mb-4"><i class="bi bi-box-seam me-2"></i>Ferretería Stock</h3>
+        <ul class="nav nav-pills mb-3 justify-content-center" id="authTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="login-tab" data-bs-toggle="pill" data-bs-target="#login" type="button">Iniciar sesión</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="register-tab" data-bs-toggle="pill" data-bs-target="#register" type="button">Registrarse</button>
+            </li>
+        </ul>
+        <div class="tab-content" id="authTabContent">
+            <!-- LOGIN -->
+            <div class="tab-pane fade show active" id="login" role="tabpanel">
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" id="loginEmail" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Contraseña</label>
+                        <input type="password" class="form-control" id="loginPassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Entrar</button>
+                    <div id="loginError" class="text-danger small mt-2"></div>
+                </form>
+            </div>
+            <!-- REGISTRO -->
+            <div class="tab-pane fade" id="register" role="tabpanel">
+                <form id="registerForm">
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" id="regEmail" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Contraseña (mínimo 6 caracteres)</label>
+                        <input type="password" class="form-control" id="regPassword" required minlength="6">
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">Crear cuenta</button>
+                    <div id="registerError" class="text-danger small mt-2"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== APLICACIÓN PRINCIPAL (requiere autenticación) ==================== -->
+<div id="mainApp">
+    <!-- Barra de navegación -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#"><i class="bi bi-box-seam me-2 text-primary"></i>Ferretería Stock</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link active" href="#" data-section="dashboard"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" data-section="productos"><i class="bi bi-grid me-1"></i>Productos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" data-section="movimientos"><i class="bi bi-arrow-left-right me-1"></i>Movimientos</a></li>
+                </ul>
+                <span class="navbar-text me-3" id="userEmail"></span>
+                <button class="btn btn-outline-danger btn-sm" id="logoutBtn"><i class="bi bi-box-arrow-right"></i> Salir</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenido dinámico (secciones) -->
+    <div class="container mt-4">
+        <!-- DASHBOARD -->
+        <div id="dashboardSection">
+            <h4 class="mb-3"><i class="bi bi-speedometer2 me-2"></i>Panel de control</h4>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="card card-dashboard p-3">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-boxes fs-1 text-primary me-3"></i>
+                            <div>
+                                <h6 class="text-muted mb-1">Total productos</h6>
+                                <h3 id="totalProductos">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card card-dashboard p-3">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-exclamation-triangle fs-1 text-danger me-3"></i>
+                            <div>
+                                <h6 class="text-muted mb-1">Stock por debajo del mínimo</h6>
+                                <h3 id="totalBajoStock">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <h5 class="mb-3">Últimos 5 movimientos</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle" id="ultimosMovimientosTable">
+                    <thead class="table-light">
+                        <tr><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Fecha</th><th>Usuario</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <p class="text-muted small" id="sinMovimientos">No hay movimientos registrados.</p>
+            </div>
+        </div>
+
+        <!-- PRODUCTOS -->
+        <div id="productosSection" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4><i class="bi bi-grid me-2"></i>Productos</h4>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#productoModal" id="nuevoProductoBtn"><i class="bi bi-plus-lg"></i> Nuevo producto</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle" id="productosTable">
+                    <thead class="table-light">
+                        <tr><th>Código</th><th>Nombre</th><th>Cantidad</th><th>Ubicación</th><th>Stock min.</th><th>Acciones</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <p class="text-muted small" id="sinProductos">No hay productos. ¡Crea uno!</p>
+            </div>
+            <!-- Panel de inicialización (solo visible si no hay productos) -->
+            <div id="initPanel" class="init-panel" style="display: none;">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-database-add fs-4 me-3 text-primary"></i>
+                    <div class="flex-grow-1">
+                        <strong>¿Base de datos vacía?</strong> Puedes crear productos y movimientos de ejemplo para probar.
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" id="initSampleDataBtn"><i class="bi bi-magic"></i> Crear datos de ejemplo</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MOVIMIENTOS -->
+        <div id="movimientosSection" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4><i class="bi bi-arrow-left-right me-2"></i>Registro de movimientos</h4>
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#movimientoModal"><i class="bi bi-plus-circle"></i> Registrar movimiento</button>
+            </div>
+            <!-- Filtro por producto (cuando se activa desde el historial) -->
+            <div class="alert alert-info d-flex align-items-center p-2 mb-3" id="filtroProductoInfo" style="display: none;">
+                <span id="filtroProductoTexto"></span>
+                <button class="btn btn-sm btn-outline-secondary ms-3" id="quitarFiltroMovimientos"><i class="bi bi-x"></i> Quitar filtro</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle" id="movimientosTable">
+                    <thead class="table-light">
+                        <tr><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Fecha</th><th>Usuario</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <p class="text-muted small" id="sinMovimientosCompleto">No hay movimientos.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODALES ==================== -->
+<!-- Modal Producto (alta/edición) -->
+<div class="modal fade" id="productoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="productoModalTitle">Nuevo producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="productoForm">
+                    <input type="hidden" id="productoId" value="">
+                    <div class="mb-3">
+                        <label class="form-label">Código *</label>
+                        <input type="text" class="form-control" id="productoCodigo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nombre *</label>
+                        <input type="text" class="form-control" id="productoNombre" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Cantidad actual *</label>
+                        <input type="number" class="form-control" id="productoCantidad" value="0" min="0" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ubicación</label>
+                        <input type="text" class="form-control" id="productoUbicacion">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Stock mínimo *</label>
+                        <input type="number" class="form-control" id="productoStockMin" value="0" min="0" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="guardarProductoBtn">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Movimiento -->
+<div class="modal fade" id="movimientoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Registrar movimiento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="movimientoForm">
+                    <div class="mb-3">
+                        <label class="form-label">Producto *</label>
+                        <select class="form-select" id="movimientoProducto" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo *</label>
+                        <select class="form-select" id="movimientoTipo" required>
+                            <option value="entrada">Entrada</option>
+                            <option value="salida">Salida</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Cantidad *</label>
+                        <input type="number" class="form-control" id="movimientoCantidad" min="1" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="guardarMovimientoBtn">Registrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Historial (detalle de movimientos de un producto) -->
+<div class="modal fade" id="historialModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="historialModalTitle">Historial del producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-sm" id="historialTable">
+                        <thead><tr><th>Tipo</th><th>Cantidad</th><th>Fecha</th><th>Usuario</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                    <p class="text-muted" id="sinHistorial">No hay movimientos para este producto.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== FIREBASE (compat) y BOOTSTRAP ==================== -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+// ==================== CONFIGURACIÓN DE FIREBASE (tus credenciales) ====================
+const firebaseConfig = {
+    apiKey: "AIzaSyC5freZBatfO5zrhhNNFo_nYw7ejfym2aY",
+    authDomain: "ferreteria-sistema.firebaseapp.com",
+    projectId: "ferreteria-sistema",
+    storageBucket: "ferreteria-sistema.firebasestorage.app",
+    messagingSenderId: "122400105302",
+    appId: "1:122400105302:web:36586c69fc2d2b9e71ecf7"
+};
+
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ==================== VARIABLES GLOBALES ====================
+let currentUser = null;
+let unsubscribeProducts = null;
+let unsubscribeMovements = null;
+let currentProductFilter = null; // para filtrar movimientos por productoId
+
+// Elementos del DOM
+const loginContainer = document.getElementById('loginContainer');
+const mainApp = document.getElementById('mainApp');
+const userEmailSpan = document.getElementById('userEmail');
+const sections = {
+    dashboard: document.getElementById('dashboardSection'),
+    productos: document.getElementById('productosSection'),
+    movimientos: document.getElementById('movimientosSection')
+};
+const navLinks = document.querySelectorAll('.navbar-nav .nav-link');
+const logoutBtn = document.getElementById('logoutBtn');
+const initPanel = document.getElementById('initPanel');
+
+// Formularios
+const loginForm = document.getElementById('loginForm');
+const registerForm = document.getElementById('registerForm');
+const loginError = document.getElementById('loginError');
+const registerError = document.getElementById('registerError');
+
+// ==================== AUTENTICACIÓN ====================
+auth.onAuthStateChanged(user => {
+    if (user) {
+        currentUser = user;
+        userEmailSpan.textContent = user.email;
+        loginContainer.style.display = 'none';
+        mainApp.style.display = 'block';
+        subscribeProducts();
+        subscribeMovements();
+        showSection('dashboard');
+    } else {
+        currentUser = null;
+        loginContainer.style.display = 'block';
+        mainApp.style.display = 'none';
+        if (unsubscribeProducts) unsubscribeProducts();
+        if (unsubscribeMovements) unsubscribeMovements();
+    }
+});
+
+loginForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    auth.signInWithEmailAndPassword(email, password)
+        .catch(err => loginError.textContent = err.message);
+});
+
+registerForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const email = document.getElementById('regEmail').value;
+    const password = document.getElementById('regPassword').value;
+    auth.createUserWithEmailAndPassword(email, password)
+        .catch(err => registerError.textContent = err.message);
+});
+
+logoutBtn.addEventListener('click', () => auth.signOut());
+
+// ==================== NAVEGACIÓN ====================
+navLinks.forEach(link => {
+    link.addEventListener('click', e => {
+        e.preventDefault();
+        const section = link.dataset.section;
+        showSection(section);
+        navLinks.forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+    });
+});
+
+function showSection(sectionId) {
+    Object.keys(sections).forEach(id => sections[id].style.display = 'none');
+    sections[sectionId].style.display = 'block';
+    if (sectionId === 'movimientos') {
+        document.getElementById('filtroProductoInfo').style.display = currentProductFilter ? 'flex' : 'none';
+    }
+}
+
+// ==================== PRODUCTOS: SUSCRIPCIÓN Y RENDER ====================
+function subscribeProducts() {
+    unsubscribeProducts = db.collection('productos').onSnapshot(snapshot => {
+        renderProductos(snapshot);
+        actualizarTarjetasDashboard(snapshot);
+        llenarSelectProductos();
+        // Mostrar panel de inicialización si no hay productos
+        if (snapshot.empty) {
+            initPanel.style.display = 'block';
+        } else {
+            initPanel.style.display = 'none';
+        }
+    }, error => console.error('Error productos:', error));
+}
+
+function renderProductos(snapshot) {
+    const tbody = document.querySelector('#productosTable tbody');
+    const sinProductos = document.getElementById('sinProductos');
+    if (snapshot.empty) {
+        tbody.innerHTML = '';
+        sinProductos.style.display = 'block';
+        return;
+    }
+    sinProductos.style.display = 'none';
+    let html = '';
+    snapshot.forEach(doc => {
+        const p = doc.data();
+        const bajoStock = p.cantidad < p.stockMinimo ? 'cantidad-bajo-stock' : '';
+        html += `<tr class="${bajoStock}">
+            <td>${p.codigo || ''}</td>
+            <td>${p.nombre || ''}</td>
+            <td>${p.cantidad !== undefined ? p.cantidad : 0}</td>
+            <td>${p.ubicacion || ''}</td>
+            <td>${p.stockMinimo || 0}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary editar-producto" data-id="${doc.id}"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-sm btn-outline-danger eliminar-producto" data-id="${doc.id}"><i class="bi bi-trash"></i></button>
+                <button class="btn btn-sm btn-outline-info ver-historial" data-id="${doc.id}" data-nombre="${p.nombre}"><i class="bi bi-clock-history"></i></button>
+            </td>
+        </tr>`;
+    });
+    tbody.innerHTML = html;
+
+    document.querySelectorAll('.editar-producto').forEach(btn => btn.addEventListener('click', editarProducto));
+    document.querySelectorAll('.eliminar-producto').forEach(btn => btn.addEventListener('click', eliminarProducto));
+    document.querySelectorAll('.ver-historial').forEach(btn => btn.addEventListener('click', verHistorialProducto));
+}
+
+// ==================== MOVIMIENTOS: SUSCRIPCIÓN Y RENDER ====================
+function subscribeMovements() {
+    unsubscribeMovements = db.collection('movimientos').orderBy('fecha', 'desc').onSnapshot(snapshot => {
+        renderUltimosMovimientos(snapshot);
+        renderMovimientosCompleto(snapshot);
+    }, error => console.error('Error movimientos:', error));
+}
+
+function renderUltimosMovimientos(snapshot) {
+    const tbody = document.querySelector('#ultimosMovimientosTable tbody');
+    const sinMovimientos = document.getElementById('sinMovimientos');
+    const movs = snapshot.docs.slice(0,5);
+    if (movs.length === 0) {
+        tbody.innerHTML = '';
+        sinMovimientos.style.display = 'block';
+        return;
+    }
+    sinMovimientos.style.display = 'none';
+    let html = '';
+    movs.forEach(doc => {
+        const m = doc.data();
+        const fecha = m.fecha ? new Date(m.fecha.seconds*1000).toLocaleString() : '';
+        html += `<tr>
+            <td>${m.productoNombre || '?'}</td>
+            <td class="${m.tipo === 'entrada' ? 'movimiento-entrada' : 'movimiento-salida'}">${m.tipo}</td>
+            <td>${m.cantidad}</td>
+            <td>${fecha}</td>
+            <td>${m.usuario || ''}</td>
+        </tr>`;
+    });
+    tbody.innerHTML = html;
+}
+
+function renderMovimientosCompleto(snapshot) {
+    const tbody = document.querySelector('#movimientosTable tbody');
+    const sinMov = document.getElementById('sinMovimientosCompleto');
+    let docs = snapshot.docs;
+    if (currentProductFilter) {
+        docs = docs.filter(doc => doc.data().productoId === currentProductFilter);
+    }
+    if (docs.length === 0) {
+        tbody.innerHTML = '';
+        sinMov.style.display = 'block';
+        return;
+    }
+    sinMov.style.display = 'none';
+    let html = '';
+    docs.forEach(doc => {
+        const m = doc.data();
+        const fecha = m.fecha ? new Date(m.fecha.seconds*1000).toLocaleString() : '';
+        html += `<tr>
+            <td>${m.productoNombre || '?'}</td>
+            <td class="${m.tipo === 'entrada' ? 'movimiento-entrada' : 'movimiento-salida'}">${m.tipo}</td>
+            <td>${m.cantidad}</td>
+            <td>${fecha}</td>
+            <td>${m.usuario || ''}</td>
+        </tr>`;
+    });
+    tbody.innerHTML = html;
+
+    const filtroInfo = document.getElementById('filtroProductoInfo');
+    if (currentProductFilter) {
+        db.collection('productos').doc(currentProductFilter).get().then(doc => {
+            if (doc.exists) {
+                document.getElementById('filtroProductoTexto').innerHTML = `<i class="bi bi-filter"></i> Mostrando movimientos de: <strong>${doc.data().nombre}</strong>`;
+            }
+        });
+        filtroInfo.style.display = 'flex';
+    } else {
+        filtroInfo.style.display = 'none';
+    }
+}
+
+// ==================== TARJETAS DASHBOARD ====================
+function actualizarTarjetasDashboard(snapshot) {
+    const total = snapshot.size;
+    document.getElementById('totalProductos').textContent = total;
+    let bajoStock = 0;
+    snapshot.forEach(doc => {
+        const p = doc.data();
+        if (p.cantidad < p.stockMinimo) bajoStock++;
+    });
+    document.getElementById('totalBajoStock').textContent = bajoStock;
+}
+
+// ==================== CRUD PRODUCTOS ====================
+const productoModal = new bootstrap.Modal(document.getElementById('productoModal'));
+const productoForm = document.getElementById('productoForm');
+const productoId = document.getElementById('productoId');
+const productoCodigo = document.getElementById('productoCodigo');
+const productoNombre = document.getElementById('productoNombre');
+const productoCantidad = document.getElementById('productoCantidad');
+const productoUbicacion = document.getElementById('productoUbicacion');
+const productoStockMin = document.getElementById('productoStockMin');
+const guardarProductoBtn = document.getElementById('guardarProductoBtn');
+
+document.getElementById('nuevoProductoBtn').addEventListener('click', () => {
+    productoForm.reset();
+    productoId.value = '';
+    document.getElementById('productoModalTitle').textContent = 'Nuevo producto';
+});
+
+guardarProductoBtn.addEventListener('click', async () => {
+    if (!productoForm.checkValidity()) {
+        productoForm.reportValidity();
+        return;
+    }
+    const data = {
+        codigo: productoCodigo.value,
+        nombre: productoNombre.value,
+        cantidad: Number(productoCantidad.value),
+        ubicacion: productoUbicacion.value,
+        stockMinimo: Number(productoStockMin.value)
+    };
+    try {
+        if (productoId.value) {
+            await db.collection('productos').doc(productoId.value).update(data);
+        } else {
+            const existing = await db.collection('productos').where('codigo', '==', data.codigo).get();
+            if (!existing.empty) {
+                alert('Ya existe un producto con ese código.');
+                return;
+            }
+            await db.collection('productos').add(data);
+        }
+        productoModal.hide();
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+});
+
+async function editarProducto(e) {
+    const id = e.target.closest('button').dataset.id;
+    const doc = await db.collection('productos').doc(id).get();
+    if (!doc.exists) return;
+    const p = doc.data();
+    productoId.value = id;
+    productoCodigo.value = p.codigo || '';
+    productoNombre.value = p.nombre || '';
+    productoCantidad.value = p.cantidad || 0;
+    productoUbicacion.value = p.ubicacion || '';
+    productoStockMin.value = p.stockMinimo || 0;
+    document.getElementById('productoModalTitle').textContent = 'Editar producto';
+    productoModal.show();
+}
+
+async function eliminarProducto(e) {
+    if (!confirm('¿Eliminar producto? También se borrarán sus movimientos asociados.')) return;
+    const id = e.target.closest('button').dataset.id;
+    try {
+        // Opcional: eliminar movimientos relacionados (mejor mantener integridad)
+        const movs = await db.collection('movimientos').where('productoId', '==', id).get();
+        const batch = db.batch();
+        movs.forEach(doc => batch.delete(doc.ref));
+        batch.delete(db.collection('productos').doc(id));
+        await batch.commit();
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+// ==================== MOVIMIENTOS ====================
+const movimientoModal = new bootstrap.Modal(document.getElementById('movimientoModal'));
+const movimientoForm = document.getElementById('movimientoForm');
+const movimientoProducto = document.getElementById('movimientoProducto');
+const movimientoTipo = document.getElementById('movimientoTipo');
+const movimientoCantidad = document.getElementById('movimientoCantidad');
+const guardarMovimientoBtn = document.getElementById('guardarMovimientoBtn');
+
+async function llenarSelectProductos() {
+    const snapshot = await db.collection('productos').get();
+    let options = '<option value="">-- Seleccionar --</option>';
+    snapshot.forEach(doc => {
+        const p = doc.data();
+        options += `<option value="${doc.id}">${p.codigo} - ${p.nombre}</option>`;
+    });
+    movimientoProducto.innerHTML = options;
+}
+
+guardarMovimientoBtn.addEventListener('click', async () => {
+    if (!movimientoForm.checkValidity()) {
+        movimientoForm.reportValidity();
+        return;
+    }
+    const productoId = movimientoProducto.value;
+    const tipo = movimientoTipo.value;
+    const cantidad = Number(movimientoCantidad.value);
+    const userEmail = currentUser.email;
+
+    const prodRef = db.collection('productos').doc(productoId);
+    const prodDoc = await prodRef.get();
+    if (!prodDoc.exists) {
+        alert('Producto no encontrado');
+        return;
+    }
+    const prod = prodDoc.data();
+    if (tipo === 'salida' && prod.cantidad < cantidad) {
+        alert('Stock insuficiente para esa salida.');
+        return;
+    }
+
+    const batch = db.batch();
+    const nuevaCantidad = tipo === 'entrada' ? prod.cantidad + cantidad : prod.cantidad - cantidad;
+    batch.update(prodRef, { cantidad: nuevaCantidad });
+
+    const movimientoData = {
+        productoId: productoId,
+        productoNombre: prod.nombre,
+        tipo: tipo,
+        cantidad: cantidad,
+        fecha: firebase.firestore.FieldValue.serverTimestamp(),
+        usuario: userEmail
+    };
+    batch.set(db.collection('movimientos').doc(), movimientoData);
+
+    try {
+        await batch.commit();
+        movimientoModal.hide();
+        movimientoForm.reset();
+    } catch (err) {
+        alert('Error al registrar movimiento: ' + err.message);
+    }
+});
+
+// ==================== HISTORIAL (modal) ====================
+const historialModal = new bootstrap.Modal(document.getElementById('historialModal'));
+const historialTbody = document.querySelector('#historialTable tbody');
+const sinHistorial = document.getElementById('sinHistorial');
+const historialModalTitle = document.getElementById('historialModalTitle');
+
+async function verHistorialProducto(e) {
+    const id = e.target.closest('button').dataset.id;
+    const nombre = e.target.closest('button').dataset.nombre;
+    historialModalTitle.textContent = `Historial: ${nombre}`;
+
+    const snapshot = await db.collection('movimientos')
+        .where('productoId', '==', id)
+        .orderBy('fecha', 'desc')
+        .get();
+
+    if (snapshot.empty) {
+        historialTbody.innerHTML = '';
+        sinHistorial.style.display = 'block';
+    } else {
+        sinHistorial.style.display = 'none';
+        let html = '';
+        snapshot.forEach(doc => {
+            const m = doc.data();
+            const fecha = m.fecha ? new Date(m.fecha.seconds*1000).toLocaleString() : '';
+            html += `<tr>
+                <td class="${m.tipo === 'entrada' ? 'movimiento-entrada' : 'movimiento-salida'}">${m.tipo}</td>
+                <td>${m.cantidad}</td>
+                <td>${fecha}</td>
+                <td>${m.usuario || ''}</td>
+            </tr>`;
+        });
+        historialTbody.innerHTML = html;
+    }
+    historialModal.show();
+}
+
+// ==================== FILTRO DE MOVIMIENTOS ====================
+document.getElementById('quitarFiltroMovimientos').addEventListener('click', () => {
+    currentProductFilter = null;
+    subscribeMovements();
+    showSection('movimientos');
+});
+
+// ==================== INICIALIZAR DATOS DE EJEMPLO ====================
+document.getElementById('initSampleDataBtn').addEventListener('click', async () => {
+    if (!currentUser) return;
+    try {
+        // Crear productos de ejemplo
+        const batch = db.batch();
+        const productos = [
+            { codigo: 'MART-001', nombre: 'Martillo 500g', cantidad: 15, ubicacion: 'Estante A1', stockMinimo: 5 },
+            { codigo: 'DEST-002', nombre: 'Destornillador Phillips', cantidad: 8, ubicacion: 'Estante B2', stockMinimo: 10 },
+            { codigo: 'PINZ-003', nombre: 'Pinza de corte', cantidad: 3, ubicacion: 'Cajón 3', stockMinimo: 4 }
+        ];
+        const productoRefs = [];
+        for (const p of productos) {
+            const ref = db.collection('productos').doc();
+            productoRefs.push(ref);
+            batch.set(ref, p);
+        }
+        await batch.commit();
+
+        // Crear movimientos de ejemplo (usando el primer producto)
+        if (productoRefs.length > 0) {
+            const movBatch = db.batch();
+            const now = new Date();
+            const mov1 = {
+                productoId: productoRefs[0].id,
+                productoNombre: 'Martillo 500g',
+                tipo: 'entrada',
+                cantidad: 10,
+                fecha: firebase.firestore.Timestamp.fromDate(new Date(now.getTime() - 86400000)), // ayer
+                usuario: currentUser.email
+            };
+            const mov2 = {
+                productoId: productoRefs[0].id,
+                productoNombre: 'Martillo 500g',
+                tipo: 'salida',
+                cantidad: 2,
+                fecha: firebase.firestore.Timestamp.fromDate(now),
+                usuario: currentUser.email
+            };
+            movBatch.set(db.collection('movimientos').doc(), mov1);
+            movBatch.set(db.collection('movimientos').doc(), mov2);
+            await movBatch.commit();
+        }
+        alert('Datos de ejemplo creados correctamente.');
+    } catch (err) {
+        alert('Error al crear datos: ' + err.message);
+    }
+});
+
+// ==================== LIMPIAR MODALES ====================
+document.getElementById('productoModal').addEventListener('hidden.bs.modal', () => productoForm.reset());
+document.getElementById('movimientoModal').addEventListener('hidden.bs.modal', () => movimientoForm.reset());
+
+// ==================== INSTRUCCIONES DE CONFIGURACIÓN (en comentarios) ====================
+/*
+
+*** INSTRUCCIONES PARA CONFIGURAR FIREBASE ***
+
+1. Ve a Firebase Console y selecciona tu proyecto "ferreteria-sistema".
+2. En Authentication, habilita el método "Correo electrónico/contraseña".
+3. En Firestore Database, crea las colecciones (no es necesario crearlas manualmente, se crearán al agregar datos). 
+   Pero asegúrate de estar en modo nativo.
+4. Reglas de seguridad (recomendado):
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /{document=**} {
+         allow read, write: if request.auth != null;
+       }
+     }
+   }
+5. Para usar la app, abre este archivo en un navegador (con conexión a internet).
+
+*/
+</script>
+
+<!-- Panel de inicialización visible solo sin productos -->
+</body>
+</html>
