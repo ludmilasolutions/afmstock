@@ -199,12 +199,26 @@
             tbody.innerHTML = filtered.map((p, index) => `
                 <tr class="${p.esStockDesconocido ? 'unknown' : ''}">
                     <td><input type="checkbox" class="product-check" data-index="${index}" checked></td>
-                    <td><code>${p.codigo}</code></td>
-                    <td>${p.nombre}</td>
-                    <td>${p.cantidad}</td>
+                    <td><input type="text" class="form-control form-control-sm edit-codigo" data-index="${index}" value="${p.codigo}" style="width: 100px;"></td>
+                    <td><input type="text" class="form-control form-control-sm edit-nombre" data-index="${index}" value="${p.nombre}"></td>
+                    <td><input type="number" class="form-control form-control-sm edit-cantidad" data-index="${index}" value="${p.cantidad}" min="0" style="width: 80px;"></td>
                     <td>${p.esStockDesconocido ? '<span class="badge bg-warning text-dark badge-stock">Stock desconocido</span>' : ''}</td>
                 </tr>
             `).join('');
+
+            // Guardar cambios al modificar campos
+            document.querySelectorAll('.edit-codigo, .edit-nombre, .edit-cantidad').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const idx = parseInt(e.target.dataset.index);
+                    if (e.target.classList.contains('edit-codigo')) {
+                        productosProcesados[idx].codigo = e.target.value;
+                    } else if (e.target.classList.contains('edit-nombre')) {
+                        productosProcesados[idx].nombre = e.target.value;
+                    } else if (e.target.classList.contains('edit-cantidad')) {
+                        productosProcesados[idx].cantidad = parseInt(e.target.value) || 0;
+                    }
+                });
+            });
 
             document.getElementById('selectAll').checked = true;
         }
