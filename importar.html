@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importar Stock - StockAFM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        :root { --primary: #4361ee; --primary-dark: #3730a3; }
+        body { background: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .card { border: none; border-radius: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border: none; }
+        .btn-primary:hover { background: linear-gradient(135deg, var(--primary-dark), var(--primary)); }
+        .product-item { padding: 0.75rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .product-item:last-child { border-bottom: none; }
+        .product-item.unknown { background: #fef3c7; }
+        .badge-stock { font-size: 0.7rem; padding: 0.25rem 0.5rem; }
+        .loading { opacity: 0.6; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card p-4 mb-4">
+                    <h4 class="mb-3"><i class="bi bi-upload me-2"></i>Importar Stock desde TXT</h4>
+                    <p class="text-muted">Cargá tu archivo de stock y los productos se importarán a Firebase.</p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Stock mínimo por defecto</label>
+                        <input type="number" class="form-control" id="stockMinimo" value="5" min="0" style="max-width: 150px;">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Seleccionar archivo TXT</label>
+                        <input type="file" class="form-control" id="archivoTXT" accept=".txt">
+                    </div>
+
+                    <button class="btn btn-primary" id="procesarBtn">
+                        <i class="bi bi-gear me-1"></i> Procesar archivo
+                    </button>
+                </div>
+
+                <div class="card p-4" id="previewCard" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">Vista previa (<span id="totalPreview">0</span> productos)</h5>
+                        <div>
+                            <button class="btn btn-outline-secondary btn-sm me-2" id="selectAllBtn">Seleccionar todos</button>
+                            <button class="btn btn-primary btn-sm" id="importBtn">
+                                <i class="bi bi-cloud-upload me-1"></i> Importar a Firebase
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="searchPreview" placeholder="Buscar...">
+                    </div>
+
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 40px;"><input type="checkbox" id="selectAll"></th>
+                                    <th>Código</th>
+                                    <th>Nombre</th>
+                                    <th>Cantidad</th>
+                                    <th>Notas</th>
+                                </tr>
+                            </thead>
+                            <tbody id="previewTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card p-4 mt-4" id="resultCard" style="display: none;">
+                    <h5><i class="bi bi-check-circle text-success me-2"></i>Importación completada</h5>
+                    <p>Se importaron <span id="importedCount" class="fw-bold">0</span> productos.</p>
+                    <a href="index.html" class="btn btn-primary">Ir al sistema</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyC5freZBatfO5zrhhNNFo_nYw7ejfym2aY",
+            authDomain: "ferreteria-sistema.firebaseapp.com",
+            projectId: "ferreteria-sistema",
+            storageBucket: "ferreteria-sistema.firebasestorage.app",
+            messagingSenderId: "122400105302",
+            appId: "1:122400105302:web:36586c69fc2d2b9e71ecf7"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let productosProcesados = [];
+        let codigoCounter = 1;
+
+        // Verificar que esté logueado
+        auth.onAuthStateChanged(user => {
+            if (!user) {
+                alert('Debes iniciar sesión primero');
+                window.location.href = 'index.html';
+            }
+        });
+
+        document.getElementById('procesarBtn').addEventListener('click', async () => {
+            const file = document.getElementById('archivoTXT').files[0];
+            if (!file) { alert('Seleccioná un archivo'); return; }
+
+            const stockMinimo = parseInt(document.getElementById('stockMinimo').value) || 5;
+            
+            const text = await file.text();
+            productosProcesados = parseStockText(text, stockMinimo);
+            
+            renderPreview();
+            document.getElementById('previewCard').style.display = 'block';
+        });
+
+        function parseStockText(text, stockMinimo) {
+            const lines = text.split('\n');
+            const productos = [];
+            let tituloActual = '';
+            codigoCounter = 1;
+
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line) return;
+
+                // Detectar si es un título (termina en :)
+                if (line.endsWith(':')) {
+                    tituloActual = line.replace(':', '').trim();
+                    return;
+                }
+
+                // Detectar "sin stock" o "no se sabe stock pero hay"
+                let esStockDesconocido = line.toLowerCase().includes('sin stock') || 
+                                         line.toLowerCase().includes('no se sabe stock pero hay');
+                
+                // Limpiar el texto de notas
+                let nombreLimpio = line
+                    .replace(/no se sabe stock pero hay/gi, '')
+                    .replace(/sin stock/gi, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                // Si hay un título actual, agregarlo al nombre
+                if (tituloActual && !nombreLimpio.toLowerCase().includes(tituloActual.toLowerCase())) {
+                    nombreLimpio = `${tituloActual} ${nombreLimpio}`;
+                }
+
+                // Extraer cantidad
+                let cantidad = 1;
+                const matchCantidad = line.match(/(\d+)\s*[uUxX]/);
+                if (matchCantidad) {
+                    cantidad = parseInt(matchCantidad[1]);
+                }
+
+                // Si es stock desconocido, poner cantidad 1 pero marcar para revisión
+                if (esStockDesconocido) {
+                    cantidad = 1;
+                }
+
+                // Generar código automático
+                const codigo = `PRD-${String(codigoCounter).padStart(4, '0')}`;
+                codigoCounter++;
+
+                productos.push({
+                    codigo,
+                    nombre: nombreLimpio,
+                    cantidad: cantidad,
+                    ubicacion: '',
+                    stockMinimo: stockMinimo,
+                    esStockDesconocido: esStockDesconocido
+                });
+            });
+
+            return productos;
+        }
+
+        function renderPreview() {
+            const tbody = document.getElementById('previewTable');
+            const search = document.getElementById('searchPreview').value.toLowerCase();
+            
+            const filtered = productosProcesados.filter(p => 
+                p.nombre.toLowerCase().includes(search) || 
+                p.codigo.toLowerCase().includes(search)
+            );
+
+            document.getElementById('totalPreview').textContent = filtered.length;
+
+            tbody.innerHTML = filtered.map((p, index) => `
+                <tr class="${p.esStockDesconocido ? 'unknown' : ''}">
+                    <td><input type="checkbox" class="product-check" data-index="${index}" checked></td>
+                    <td><code>${p.codigo}</code></td>
+                    <td>${p.nombre}</td>
+                    <td>${p.cantidad}</td>
+                    <td>${p.esStockDesconocido ? '<span class="badge bg-warning text-dark badge-stock">Stock desconocido</span>' : ''}</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('selectAll').checked = true;
+        }
+
+        document.getElementById('searchPreview').addEventListener('input', renderPreview);
+
+        document.getElementById('selectAll').addEventListener('change', (e) => {
+            document.querySelectorAll('.product-check').forEach(cb => cb.checked = e.target.checked);
+        });
+
+        document.getElementById('selectAllBtn').addEventListener('click', () => {
+            const allChecked = Array.from(document.querySelectorAll('.product-check')).every(cb => cb.checked);
+            document.querySelectorAll('.product-check').forEach(cb => cb.checked = !allChecked);
+        });
+
+        document.getElementById('importBtn').addEventListener('click', async () => {
+            const checkboxes = document.querySelectorAll('.product-check:checked');
+            const indices = Array.from(checkboxes).map(cb => parseInt(cb.dataset.index));
+            
+            if (indices.length === 0) { alert('Seleccioná al menos un producto'); return; }
+
+            const btn = document.getElementById('importBtn');
+            btn.classList.add('loading');
+            btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Importando...';
+
+            const batch = db.batch();
+            let importedCount = 0;
+
+            for (const idx of indices) {
+                const p = productosProcesados[idx];
+                const ref = db.collection('productos').doc();
+                batch.set(ref, {
+                    codigo: p.codigo,
+                    nombre: p.nombre,
+                    cantidad: p.cantidad,
+                    ubicacion: '',
+                    stockMinimo: p.stockMinimo,
+                    stockDesconocido: p.esStockDesconocido
+                });
+                importedCount++;
+            }
+
+            try {
+                await batch.commit();
+                document.getElementById('importedCount').textContent = importedCount;
+                document.getElementById('resultCard').style.display = 'block';
+                document.getElementById('previewCard').style.display = 'none';
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+
+            btn.classList.remove('loading');
+            btn.innerHTML = '<i class="bi bi-cloud-upload me-1"></i> Importar a Firebase';
+        });
+    </script>
+</body>
+</html>
