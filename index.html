@@ -1143,7 +1143,7 @@
         function showEntradaProducto(productoId) {
             showSection('movimientos');
             document.getElementById('movimientoTipo').value = 'entrada';
-            document.getElementById('movimientoProducto').value = productoId;
+            productoPreseleccionado = productoId;
             new bootstrap.Modal(document.getElementById('movimientoModal')).show();
         }
 
@@ -1279,7 +1279,8 @@
         }
 
         // Movimientos
-        const movimientoModal = new bootstrap.Modal(document.getElementById('movimientoModal'));
+const movimientoModal = new bootstrap.Modal(document.getElementById('movimientoModal'));
+        let productoPreseleccionado = null;
 
         async function llenarSelectProductos() {
             const snap = await db.collection('productos').get();
@@ -1289,45 +1290,17 @@
                 opts += `<option value="${d.id}">${p.codigo} - ${p.nombre}</option>`;
             });
             document.getElementById('movimientoProducto').innerHTML = opts;
+            
+            if (productoPreseleccionado) {
+                document.getElementById('movimientoProducto').value = productoPreseleccionado;
+                productoPreseleccionado = null;
+            }
         }
 
-        document.getElementById('guardarMovimientoBtn').addEventListener('click', async () => {
-            const form = document.getElementById('movimientoForm');
-            if (!form.checkValidity()) { form.reportValidity(); return; }
-
-            const productoId = document.getElementById('movimientoProducto').value;
-            const tipo = document.getElementById('movimientoTipo').value;
-            const cantidad = Number(document.getElementById('movimientoCantidad').value);
-
-            const prodRef = db.collection('productos').doc(productoId);
-            const prodDoc = await prodRef.get();
-            if (!prodDoc.exists) { alert('Producto no encontrado'); return; }
-            const prod = prodDoc.data();
-
-            if (tipo === 'salida' && prod.cantidad < cantidad) {
-                alert('Stock insuficiente'); return;
-            }
-
-            const nuevaCantidad = tipo === 'entrada' ? prod.cantidad + cantidad : prod.cantidad - cantidad;
-            const batch = db.batch();
-            batch.update(prodRef, { cantidad: nuevaCantidad });
-            batch.set(db.collection('movimientos').doc(), {
-                productoId,
-                productoNombre: prod.nombre,
-                tipo,
-                cantidad,
-                fecha: firebase.firestore.FieldValue.serverTimestamp(),
-                usuario: currentUser.email
-            });
-
-            try {
-                await batch.commit();
-                movimientoModal.hide();
-                document.getElementById('movimientoForm').reset();
-            } catch (err) { alert('Error: ' + err.message); }
+        document.getElementById('movimientoModal').addEventListener('shown.bs.modal', () => {
+            document.getElementById('movimientoForm').reset();
+            llenarSelectProductos();
         });
-
-        document.getElementById('movimientoModal').addEventListener('shown.bs.modal', llenarSelectProductos);
         document.getElementById('productoModal').addEventListener('hidden.bs.modal', () => document.getElementById('productoForm').reset());
     </script>
 </body>
