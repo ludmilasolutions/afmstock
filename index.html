@@ -1,2086 +1,1334 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#020617">
-  <meta name="description" content="TECNIYA - Encontrá profesionales técnicos cerca tuyo">
-  <title>TECNIYA | Profesionales Técnicos a tu Alcance</title>
-  <link rel="manifest" id="manifest-link">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.cdnfonts.com/css/inter" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <link rel="stylesheet" href="css/styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#4361ee">
+    <meta name="description" content="Control de inventario para ferretería - Creado por AFMSolutions">
+    <title>StockAFM - Control de Stock</title>
+    <link rel="manifest" href="manifest.json">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3730a3;
+            --secondary: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --sidebar-width: 280px;
+        }
+        
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Login */
+        .login-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            padding: 1rem;
+        }
+        .login-card {
+            background: var(--surface);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+        }
+        .login-logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2.5rem;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: var(--sidebar-width);
+            background: var(--surface);
+            box-shadow: 4px 0 24px rgba(0,0,0,0.08);
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar.open { transform: translateX(0); }
+        .sidebar-header {
+            padding: 1.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+        .sidebar-nav { flex: 1; padding: 1rem 0; overflow-y: auto; }
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            color: var(--text);
+            text-decoration: none;
+            transition: all 0.2s;
+            border: none;
+            background: none;
+            width: 100%;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .sidebar-item:hover { background: var(--bg); }
+        .sidebar-item.active {
+            background: linear-gradient(90deg, rgba(67,97,238,0.1) 0%, transparent 100%);
+            color: var(--primary);
+            font-weight: 600;
+            border-left: 3px solid var(--primary);
+        }
+        .sidebar-item i { margin-right: 0.75rem; width: 1.5rem; text-align: center; }
+        .sidebar-footer { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; }
+
+        /* Main Content */
+        .main-content {
+            min-height: 100vh;
+            padding-top: 70px;
+            padding-bottom: 80px;
+        }
+        
+        /* Top Bar */
+        .topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: var(--surface);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            z-index: 999;
+        }
+        .menu-btn {
+            width: 44px;
+            height: 44px;
+            border: none;
+            background: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            border-radius: 0.75rem;
+        }
+        .menu-btn:hover { background: var(--bg); }
+        .topbar-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-left: 1rem;
+            flex: 1;
+        }
+        .topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Bottom Nav (Mobile) */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
+            display: none;
+            z-index: 999;
+            padding: 0.5rem;
+        }
+        .bottom-nav.show { display: flex; justify-content: space-around; }
+        .bottom-nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.5rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.75rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+        }
+        .bottom-nav-item.active { color: var(--primary); }
+        .bottom-nav-item i { font-size: 1.5rem; margin-bottom: 0.25rem; }
+
+        /* Overlay */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+            z-index: 999;
+        }
+        .overlay.show { opacity: 1; visibility: visible; }
+
+        /* Cards */
+        .card {
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            padding: 1rem;
+        }
+        .quick-action {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem 1rem;
+            background: var(--surface);
+            border-radius: 1rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .quick-action:hover { transform: scale(1.02); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .quick-action i { font-size: 2rem; margin-bottom: 0.5rem; }
+        .quick-action.entrada { color: var(--success); }
+        .quick-action.salida { color: var(--danger); }
+        .quick-action.producto { color: var(--primary); }
+        .quick-action.reportes { color: var(--warning); }
+
+        /* Stats */
+        .stat-card {
+            background: var(--surface);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .stat-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        .stat-icon.primary { background: rgba(67,97,238,0.1); color: var(--primary); }
+        .stat-icon.danger { background: rgba(239,68,68,0.1); color: var(--danger); }
+        .stat-icon.success { background: rgba(16,185,129,0.1); color: var(--success); }
+        .stat-icon.warning { background: rgba(245,158,11,0.1); color: var(--warning); }
+
+        /* Tables */
+        .table-container {
+            background: var(--surface);
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .table { margin-bottom: 0; }
+        .table th { 
+            background: var(--bg); 
+            font-weight: 600; 
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 1rem;
+        }
+        .table td { padding: 1rem; vertical-align: middle; }
+        .table tbody tr { transition: background 0.2s; }
+        .table tbody tr:hover { background: var(--bg); }
+
+        /* Stock Status */
+        .stock-badge {
+            padding: 0.35rem 0.75rem;
+            border-radius: 2rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .stock-ok { background: rgba(16,185,129,0.1); color: var(--success); }
+        .stock-low { background: rgba(245,158,11,0.1); color: var(--warning); }
+        .stock-critical { background: rgba(239,68,68,0.1); color: var(--danger); }
+
+        /* Movement Types */
+        .movement-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .movement-entrada { background: rgba(16,185,129,0.1); color: var(--success); }
+        .movement-salida { background: rgba(239,68,68,0.1); color: var(--danger); }
+
+        /* Action Buttons */
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 0.75rem;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-icon:hover { transform: scale(1.1); }
+        .btn-icon-primary { background: rgba(67,97,238,0.1); color: var(--primary); }
+        .btn-icon-danger { background: rgba(239,68,68,0.1); color: var(--danger); }
+        .btn-icon-info { background: rgba(100,116,139,0.1); color: var(--secondary); }
+        .btn-icon-warning { background: rgba(245,158,11,0.1); color: var(--warning); }
+
+        /* FAB */
+        .fab {
+            position: fixed;
+            bottom: 90px;
+            right: 1.5rem;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            font-size: 1.75rem;
+            box-shadow: 0 8px 24px rgba(67,97,238,0.4);
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 998;
+        }
+        .fab.show { display: flex; }
+        .fab:hover { transform: scale(1.1); }
+
+        /* Modals */
+        .modal-content {
+            border: none;
+            border-radius: 1.5rem;
+        }
+        .modal-header {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1.25rem 1.5rem;
+        }
+        .modal-body { padding: 1.5rem; }
+        .modal-footer {
+            border-top: 1px solid #e2e8f0;
+            padding: 1rem 1.5rem;
+        }
+
+        /* Forms */
+        .form-label {
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+        .form-control, .form-select {
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            transition: border-color 0.2s;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67,97,238,0.1);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+        .empty-state i { font-size: 4rem; margin-bottom: 1rem; opacity: 0.3; }
+
+        /* Search */
+        .search-box {
+            background: var(--surface);
+            border-radius: 1rem;
+            padding: 0.75rem 1rem;
+            margin: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .search-box input {
+            border: none;
+            outline: none;
+            flex: 1;
+            font-size: 1rem;
+        }
+
+        /* Footer */
+        .app-footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+        .app-footer a { color: var(--primary); text-decoration: none; }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.3s ease; }
+
+        /* Responsive */
+        @media (min-width: 992px) {
+            .sidebar { transform: translateX(0); }
+            .main-content { margin-left: var(--sidebar-width); padding-bottom: 0; }
+            .topbar { left: var(--sidebar-width); }
+            .bottom-nav { display: none !important; }
+            .fab { bottom: 1.5rem; }
+        }
+        @media (max-width: 991px) {
+            .main-content { margin-left: 0; }
+        }
+
+        /* Install Prompt */
+        .install-prompt {
+            position: fixed;
+            bottom: 90px;
+            left: 1rem;
+            right: 1rem;
+            background: var(--surface);
+            padding: 1rem;
+            border-radius: 1rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            display: none;
+            align-items: center;
+            gap: 1rem;
+            z-index: 1000;
+        }
+        .install-prompt.show { display: flex; }
+    </style>
 </head>
 <body>
-
-<div class="loading-overlay" id="loading-overlay">
-  <div class="loader"></div>
-  <div class="loading-text">Iniciando TECNIYA...</div>
-</div>
-
-<div id="toast-container"></div>
-
-<div class="notif-panel" id="notif-panel">
-  <div class="notif-panel-header">
-    <span style="font-family:'Inter',sans-serif;font-weight:700;font-size:0.95rem;">Notificaciones</span>
-    <button id="mark-all-read-btn" style="font-size:0.78rem;color:var(--accent);background:none;border:none;cursor:pointer;">Marcar todas leídas</button>
-  </div>
-  <div class="notif-list" id="notif-list">
-    <div class="empty-state" style="padding:30px 20px;">
-      <i class="fa fa-bell-slash"></i>
-      <p>Sin notificaciones</p>
-    </div>
-  </div>
-</div>
-
-<header id="header">
-  <div class="header-inner">
-    <div class="logo-wrap" id="logo-wrap">
-      <div class="logo-icon"><i class="fa fa-wrench"></i></div>
-      <div>
-        <div class="logo-text">TECNIYA</div>
-        <div class="logo-sub">by AFM Solutions</div>
-      </div>
-    </div>
-    <nav class="nav-main" id="nav-main">
-      <a href="#" id="nav-home">Inicio</a>
-      <a href="#" id="nav-pros">Profesionales</a>
-      <a href="#" id="nav-how">¿Cómo funciona?</a>
-      <a href="#" id="nav-sub">Suscripción</a>
-    </nav>
-    <div class="nav-actions">
-      <button class="notif-btn" id="notif-btn" style="display:none;">
-        <i class="fa fa-bell"></i>
-        <span class="notif-count hidden" id="notif-badge">0</span>
-      </button>
-      <div id="nav-auth-btns">
-        <button class="btn btn-ghost btn-sm" id="btn-login-nav">Ingresar</button>
-        <button class="btn btn-primary btn-sm" id="btn-register-nav">Registrarse</button>
-      </div>
-      <div id="nav-user-menu" style="display:none;align-items:center;gap:10px;">
-        <div class="user-avatar" id="user-avatar-btn">U</div>
-        <div id="user-dropdown" class="user-dropdown">
-          <div class="user-dropdown-name" id="menu-user-name"></div>
-          <a href="#" id="menu-dashboard" class="user-menu-item"><i class="fa fa-gauge"></i><span id="menu-dashboard-label">Mi Panel Cliente</span></a>
-          <a href="#" id="menu-switch-pro" class="user-menu-item user-menu-item--pro" style="display:none;"><i class="fa fa-right-left"></i><span id="menu-switch-pro-label">Panel Profesional</span></a>
-          <a href="#" id="menu-activate-pro" class="user-menu-item user-menu-item--pro" style="display:none;"><i class="fa fa-plus-circle"></i>Unirme como profesional</a>
-          <a href="#" id="menu-profile" class="user-menu-item"><i class="fa fa-user"></i>Mi Perfil</a>
-          <a href="#" id="menu-chat" class="user-menu-item" onclick="event.preventDefault();window.hideUserMenu?.();window.toggleFloatChat();"><i class="fa fa-comments"></i>Mensajes</a>
-          <a href="#" id="menu-logout" class="user-menu-item user-menu-item--danger"><i class="fa fa-right-from-bracket"></i>Salir</a>
-        </div>
-      </div>
-      <button class="hamburger" id="hamburger-btn"><i class="fa fa-bars"></i></button>
-    </div>
-  </div>
-  <div class="mobile-nav" id="mobile-nav">
-    <a href="#" id="mobile-home-link">Inicio</a>
-    <a href="#" id="mobile-pros-link">Profesionales</a>
-    <a href="#" id="mobile-how-link">¿Cómo funciona?</a>
-    <a href="#" id="mobile-sub-link">Suscripción</a>
-    <a href="#" id="mobile-login-link">Ingresar</a>
-    <a href="#" id="mobile-panel-link" style="display:none;">Mi Panel</a>
-  </div>
-</header>
-
-<div class="page active" id="page-home">
-  <section id="hero-section">
-    <div class="hero-glow-1"></div>
-    <div class="hero-glow-2"></div>
-    <div class="container">
-      <div class="hero-content">
-        <div class="hero-eyebrow"><i class="fa fa-bolt"></i>Profesionales verificados en tu zona</div>
-        <h1 class="hero-title">El técnico que necesitás,<br>cuando lo necesitás</h1>
-        <p class="hero-subtitle">Encontrá profesionales certificados de plomería, electricidad, carpintería, refrigeración y más. Rápido, confiable, cerca tuyo.</p>
-        <div class="hero-cta-wrap">
-          <button class="urgent-btn" id="urgent-btn">
-            <i class="fa fa-bolt"></i>
-            ¡Necesito un técnico URGENTE!
-          </button>
-          <button class="btn btn-ghost btn-lg" id="search-btn">
-            <i class="fa fa-search"></i>Buscar profesionales
-          </button>
-        </div>
-        <div class="hero-stats">
-          <div class="hero-stat"><div class="hero-stat-num" id="stat-pros">0</div><div class="hero-stat-label">Profesionales</div></div>
-          <div class="hero-stat"><div class="hero-stat-num" id="stat-jobs">0</div><div class="hero-stat-label">Trabajos realizados</div></div>
-          <div class="hero-stat"><div class="hero-stat-num" id="stat-cities">0</div><div class="hero-stat-label">Ciudades</div></div>
-          <div class="hero-stat"><div class="hero-stat-num" id="stat-rating">0</div><div class="hero-stat-label">Calificación prom.</div></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <div class="container">
-    <div class="ad-section">
-      <div id="ad-banner-main" class="ad-banner">
-        <span class="ad-label">Publicidad</span>
-        <div class="ad-content">
-          <div class="ad-img-placeholder" id="ad-img-placeholder"><i class="fa fa-bullhorn"></i></div>
-          <img id="ad-img-real" src="" alt="" style="display:none;width:60px;height:60px;border-radius:8px;object-fit:cover;flex-shrink:0;">
-          <div class="ad-text-wrap">
-            <div class="ad-title" id="ad-title">Cargando publicidad...</div>
-            <div class="ad-desc" id="ad-desc"></div>
-          </div>
-          <span class="ad-level-badge ad-level-nacional" id="ad-level-badge">Nacional</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="search-section" id="search-section">
-      <div class="search-card">
-        <div class="search-title"><i class="fa fa-sliders-h" style="color:var(--accent);margin-right:8px;"></i>Encontrá tu profesional ideal</div>
-        <div class="search-grid">
-          <div class="search-group">
-            <label>Especialidad</label>
-            <select class="search-select" id="filter-specialty">
-              <option value="">Todas las especialidades</option>
-            </select>
-          </div>
-          <div class="search-group">
-            <label>Provincia</label>
-            <select class="search-select" id="filter-province">
-              <option value="">Todas las provincias</option>
-              <option value="Buenos Aires">Buenos Aires</option>
-              <option value="Córdoba">Córdoba</option>
-              <option value="Santa Fe">Santa Fe</option>
-              <option value="Mendoza">Mendoza</option>
-              <option value="Tucumán">Tucumán</option>
-              <option value="Salta">Salta</option>
-              <option value="Neuquén">Neuquén</option>
-              <option value="Entre Ríos">Entre Ríos</option>
-              <option value="Chaco">Chaco</option>
-              <option value="Corrientes">Corrientes</option>
-            </select>
-          </div>
-          <div class="search-group">
-            <label>Ciudad</label>
-            <input type="text" class="search-input" id="filter-city" placeholder="Ej: Rosario">
-          </div>
-          <div class="search-group">
-            <label>Zona</label>
-            <input type="text" class="search-input" id="filter-zone" placeholder="Ej: Centro">
-          </div>
-          <div class="search-group">
-            <label>Distancia</label>
-            <select class="search-select" id="filter-distance">
-              <option value="">Cualquier distancia</option>
-              <option value="5">Hasta 5 km</option>
-              <option value="10">Hasta 10 km</option>
-              <option value="20">Hasta 20 km</option>
-              <option value="50">Hasta 50 km</option>
-            </select>
-          </div>
-          <div class="search-group">
-            <label>Ordenar por</label>
-            <select class="search-select" id="filter-sort">
-              <option value="ranking">Ranking</option>
-              <option value="rating">Mejor puntuados</option>
-              <option value="jobs">Más trabajos</option>
-              <option value="distance">Más cercanos</option>
-            </select>
-          </div>
-        </div>
-        <div class="search-toggles">
-          <div class="toggle-chip" id="toggle-cert"><i class="fa fa-certificate"></i>Solo certificados</div>
-          <div class="toggle-chip" id="toggle-dest"><i class="fa fa-star"></i>Solo destacados</div>
-          <div class="toggle-chip" id="toggle-online"><i class="fa fa-circle" style="color:var(--green);font-size:0.6rem;"></i>Disponibles ahora</div>
-        </div>
-        <div class="search-actions">
-          <button class="btn btn-primary" id="btn-search"><i class="fa fa-search"></i>Buscar</button>
-          <button class="btn btn-ghost" id="btn-clear-filters">Limpiar filtros</button>
-          <button class="btn btn-accent" id="btn-detect-location"><i class="fa fa-location-dot"></i>Usar mi ubicación</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="section-destacados">
-    <div class="section-header">
-      <div class="section-title-wrap">
-        <div class="section-icon section-icon-orange"><i class="fa fa-fire"></i></div>
-        <div>
-          <div class="section-label">Profesionales Destacados</div>
-          <div class="section-count" id="count-destacados">Cargando...</div>
-        </div>
-      </div>
-      <button class="see-all-btn" id="see-all-destacados">Ver todos <i class="fa fa-arrow-right"></i></button>
-    </div>
-    <div class="pros-grid" id="grid-destacados">
-      <div class="empty-state" style="grid-column:1/-1;padding:40px;"><div class="loader"></div></div>
-    </div>
-    </div><!-- /section-destacados -->
-
-    <div id="section-certificados">
-    <div class="section-header">
-      <div class="section-title-wrap">
-        <div class="section-icon section-icon-blue"><i class="fa fa-certificate"></i></div>
-        <div>
-          <div class="section-label">Profesionales Certificados</div>
-          <div class="section-count" id="count-certificados">Cargando...</div>
-        </div>
-      </div>
-      <button class="see-all-btn" id="see-all-certificados">Ver todos <i class="fa fa-arrow-right"></i></button>
-    </div>
-    <div class="pros-grid" id="grid-certificados">
-      <div class="empty-state" style="grid-column:1/-1;padding:40px;"><div class="loader"></div></div>
-    </div>
-    </div><!-- /section-certificados -->
-
-    <div id="section-top">
-    <div class="section-header">
-      <div class="section-title-wrap">
-        <div class="section-icon section-icon-green"><i class="fa fa-star"></i></div>
-        <div>
-          <div class="section-label">Mejor Puntuados</div>
-          <div class="section-count" id="count-top">Cargando...</div>
-        </div>
-      </div>
-      <button class="see-all-btn" id="see-all-top">Ver todos <i class="fa fa-arrow-right"></i></button>
-    </div>
-    <div class="pros-grid" id="grid-top">
-      <div class="empty-state" style="grid-column:1/-1;padding:40px;"><div class="loader"></div></div>
-    </div>
-    </div><!-- /section-top -->
-
-    <div class="section-header">
-      <div class="section-title-wrap">
-        <div class="section-icon section-icon-purple"><i class="fa fa-users"></i></div>
-        <div>
-          <div class="section-label">Todos los Profesionales</div>
-          <div class="section-count" id="count-all">Cargando...</div>
-        </div>
-      </div>
-    </div>
-    <div class="pros-grid" id="grid-all">
-      <div class="empty-state" style="grid-column:1/-1;padding:40px;"><div class="loader"></div></div>
-    </div>
-
-  </div>
-</div>
-
-<div class="page" id="page-professionals-list">
-  <div class="container" style="padding-top:88px;padding-bottom:60px;">
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px;">
-      <button class="btn btn-ghost btn-sm" id="btn-back-pros"><i class="fa fa-arrow-left"></i></button>
-      <h2 style="margin:0;font-size:1.6rem;">Todos los profesionales</h2>
-    </div>
-    <div class="pros-grid" id="grid-all-page">
-      <div class="empty-state" style="grid-column:1/-1;padding:60px;"><div class="loader"></div></div>
-    </div>
-  </div>
-</div>
-
-<div class="page" id="page-pro-profile">
-  <div class="container pro-profile-wrap">
-    <button class="btn btn-ghost btn-sm" id="btn-back-profile"><i class="fa fa-arrow-left"></i>Volver</button>
-    <div id="pro-profile-content">
-      <div class="empty-state"><div class="loader"></div></div>
-    </div>
-  </div>
-</div>
-
-<div class="page" id="page-user-dashboard">
-  <div class="container dash-wrap">
-    <div class="dash-header">
-      <div>
-        <div class="dash-greeting">Hola, <span id="dash-user-name">Usuario</span> 👋</div>
-        <p style="color:var(--gray);font-size:0.9rem;margin-top:4px;">Panel de cliente</p>
-      </div>
-      <button class="btn btn-orange" id="btn-urgent-dash"><i class="fa fa-bolt"></i>Técnico urgente</button>
-    </div>
-    <div class="stats-row">
-      <div class="stat-card"><div class="stat-num" style="color:var(--accent);" id="user-stat-active">0</div><div class="stat-label">Trabajos activos</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:var(--green);" id="user-stat-done">0</div><div class="stat-label">Finalizados</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:var(--orange);" id="user-stat-favs">0</div><div class="stat-label">Favoritos</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:var(--primary);" id="user-stat-budgets">0</div><div class="stat-label">Presupuestos</div></div>
-    </div>
-    <div class="tabs" id="user-tabs">
-      <button class="tab active" data-tab="tab-mis-trabajos">Mis Trabajos</button>
-      <button class="tab" data-tab="tab-presupuestos">Presupuestos</button>
-      <button class="tab" data-tab="tab-favoritos">Favoritos</button>
-      <button class="tab" data-tab="tab-historial">Historial</button>
-    </div>
-    <div class="tab-panel active" id="tab-mis-trabajos">
-      <div class="jobs-list" id="user-jobs-list">
-        <div class="empty-state"><i class="fa fa-briefcase"></i><p>No tenés trabajos activos.<br><a href="#" id="link-search-pro" style="color:var(--accent);">Buscar un profesional</a></p></div>
-      </div>
-    </div>
-    <div class="tab-panel" id="tab-presupuestos">
-      <div class="jobs-list" id="user-budgets-list">
-        <div class="empty-state"><i class="fa fa-file-invoice"></i><p>No tenés presupuestos recibidos.</p></div>
-      </div>
-    </div>
-    <div class="tab-panel" id="tab-favoritos">
-      <div class="pros-grid" id="user-favs-grid">
-        <div class="empty-state" style="grid-column:1/-1;padding:40px;"><i class="fa fa-heart"></i><p>No guardaste profesionales favoritos.</p></div>
-      </div>
-    </div>
-    <div class="tab-panel" id="tab-historial">
-      <div class="jobs-list" id="user-history-list">
-        <div class="empty-state"><i class="fa fa-clock-rotate-left"></i><p>Tu historial aparecerá aquí.</p></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="page" id="page-pro-dashboard">
-  <div class="container dash-wrap">
-    <div class="dash-header">
-      <div>
-        <div class="dash-greeting">Panel Profesional</div>
-        <p style="color:var(--gray);font-size:0.9rem;margin-top:4px;" id="pro-dash-specialty">Tu especialidad</p>
-      </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--glass);border-radius:var(--radius);border:1px solid var(--border);">
-          <div style="display:flex;align-items:center;gap:6px;">
-            <i class="fa fa-circle" id="status-dot" style="font-size:0.6rem;color:var(--gray);"></i>
-            <span id="status-text" style="font-size:0.85rem;color:var(--gray);">Desconectado</span>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="toggle-online-status" style="display:none;">
-            <span class="toggle-slider">
-              <span class="toggle-knob"></span>
-            </span>
-          </label>
-        </div>
-        <button class="btn btn-ghost btn-sm" id="btn-edit-pro-profile"><i class="fa fa-pencil"></i>Editar Perfil</button>
-        <button class="btn btn-orange btn-sm" id="btn-featured-pro"><i class="fa fa-crown"></i>Ser Destacado</button>
-      </div>
-    </div>
-    <div class="stats-row">
-      <div class="stat-card"><div class="stat-num" style="color:var(--orange);" id="pro-stat-new">0</div><div class="stat-label">Solicitudes nuevas</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:var(--accent);" id="pro-stat-active">0</div><div class="stat-label">Trabajos activos</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:var(--green);" id="pro-stat-done">0</div><div class="stat-label">Finalizados</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:#fbbf24;" id="pro-stat-rating">0</div><div class="stat-label">Puntuación promedio</div></div>
-    </div>
-    <div class="tabs" id="pro-tabs">
-      <button class="tab active" data-tab="tab-pro-solicitudes">Solicitudes</button>
-      <button class="tab" data-tab="tab-pro-activos">En proceso</button>
-      <button class="tab" data-tab="tab-pro-finalizados">Finalizados</button>
-      <button class="tab" data-tab="tab-pro-presupuestos">Presupuestos</button>
-      <button class="tab" data-tab="tab-pro-fotos">Mis Fotos</button>
-      <button class="tab" data-tab="tab-pro-config">Configuración</button>
-    </div>
-    <div class="tab-panel active" id="tab-pro-solicitudes">
-      <div id="urgent-requests-section" style="margin-bottom:24px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <i class="fa fa-bolt" style="color:var(--orange);font-size:1.2rem;"></i>
-            <h3 style="margin:0;font-size:1rem;">Solicitudes Urgentes</h3>
-          </div>
-          <span id="urgent-count-badge" style="background:var(--orange);color:white;padding:2px 8px;border-radius:20px;font-size:0.75rem;font-weight:700;display:none;">0</span>
-        </div>
-        <div id="urgent-requests-list"></div>
-      </div>
-      <h3 style="margin:0 0 12px 0;font-size:1rem;">Solicitudes Normales</h3>
-      <div class="jobs-list" id="pro-jobs-new">
-        <div class="empty-state"><i class="fa fa-inbox"></i><p>No tenés solicitudes nuevas.</p></div>
-      </div>
-    </div>
-    <div class="tab-panel" id="tab-pro-activos">
-      <div class="jobs-list" id="pro-jobs-active">
-        <div class="empty-state"><i class="fa fa-gears"></i><p>No tenés trabajos en proceso.</p></div>
-      </div>
-    </div>
-    <div class="tab-panel" id="tab-pro-finalizados">
-      <div class="jobs-list" id="pro-jobs-done">
-        <div class="empty-state"><i class="fa fa-check-circle"></i><p>Aún no finalizaste trabajos.</p></div>
-      </div>
-    </div>
-    <div class="tab-panel" id="tab-pro-presupuestos">
-      <div style="margin-bottom:16px;"><button class="btn btn-primary btn-sm" id="btn-new-budget"><i class="fa fa-plus"></i>Nuevo Presupuesto</button></div>
-      <div class="jobs-list" id="pro-budgets-list">
-        <div class="empty-state"><i class="fa fa-file-invoice-dollar"></i><p>No enviaste presupuestos aún.</p></div>
-      </div>
-    </div>
-    <div class="tab-panel" id="tab-pro-fotos">
-      <div style="margin-bottom:16px;">
-        <button class="btn btn-primary btn-sm" id="btn-upload-photo"><i class="fa fa-upload"></i>Subir foto</button>
-        <input type="file" id="photo-upload-input" accept="image/*" style="display:none;">
-      </div>
-      <div class="photos-grid" id="pro-work-photos">
-        <div class="photo-thumb"><i class="fa fa-image"></i></div>
-        <div class="photo-thumb"><i class="fa fa-image"></i></div>
-        <div class="photo-thumb"><i class="fa fa-image"></i></div>
-      </div>
-    </div>
-    <div class="tab-panel" id="tab-pro-config">
-      <div class="card" style="max-width:500px;">
-        <h3 style="font-size:1rem;margin-bottom:20px;">Configuración de disponibilidad</h3>
-        <div class="form-group">
-          <label class="form-label">Días laborales</label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;" id="dias-laborales">
-            <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;cursor:pointer;" for="dia-lun"><input type="checkbox" id="dia-lun" value="Lunes" style="accent-color:var(--primary);">Lunes</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;cursor:pointer;" for="dia-mar"><input type="checkbox" id="dia-mar" value="Martes" style="accent-color:var(--primary);">Martes</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;cursor:pointer;" for="dia-mie"><input type="checkbox" id="dia-mie" value="Miércoles" style="accent-color:var(--primary);">Miércoles</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;cursor:pointer;" for="dia-jue"><input type="checkbox" id="dia-jue" value="Jueves" style="accent-color:var(--primary);">Jueves</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;cursor:pointer;" for="dia-vie"><input type="checkbox" id="dia-vie" value="Viernes" style="accent-color:var(--primary);">Viernes</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;cursor:pointer;" for="dia-sab"><input type="checkbox" id="dia-sab" value="Sábado" style="accent-color:var(--primary);">Sábado</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;cursor:pointer;" for="dia-dom"><input type="checkbox" id="dia-dom" value="Domingo" style="accent-color:var(--primary);">Domingo</label>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Horario desde</label>
-            <input type="time" class="form-input" id="hora-desde" value="08:00">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Horario hasta</label>
-            <input type="time" class="form-input" id="hora-hasta" value="18:00">
-          </div>
-        </div>
-        <div class="form-group">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.9rem;">
-            <input type="checkbox" id="urgencias" style="accent-color:var(--green);width:16px;height:16px;">
-            <i class="fa fa-circle" style="font-size:0.6rem;color:var(--green);"></i>
-            Conectado para urgencias (recibir solicitudes urgentes)
-          </label>
-          <div style="font-size:0.75rem;color:var(--gray);margin-top:4px;margin-left:24px;">
-            Cuando estés conectado, aparecerás como "Disponible ahora" y recibirás notificaciones de trabajos urgentes
-          </div>
-        </div>
-        <button class="btn btn-primary btn-sm" id="btn-save-availability">Guardar configuración</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="page" id="page-admin">
-  <div class="admin-sidebar" id="admin-sidebar">
-    <div class="admin-sidebar-item active" data-tab="admin-overview"><i class="fa fa-gauge"></i>Dashboard</div>
-    <div class="admin-sidebar-item" data-tab="admin-users"><i class="fa fa-users"></i>Usuarios</div>
-    <div class="admin-sidebar-item" data-tab="admin-pros"><i class="fa fa-user-tie"></i>Profesionales</div>
-    <div class="admin-sidebar-item" data-tab="admin-jobs"><i class="fa fa-briefcase"></i>Trabajos</div>
-    <div class="admin-sidebar-item" data-tab="admin-subs"><i class="fa fa-crown"></i>Suscripciones</div>
-    <div class="admin-sidebar-item" data-tab="admin-ads"><i class="fa fa-bullhorn"></i>Publicidad</div>
-    <div class="admin-sidebar-item" data-tab="admin-reviews"><i class="fa fa-star"></i>Reseñas</div>
-    <div class="admin-sidebar-item" data-tab="admin-penalties"><i class="fa fa-gavel"></i>Penalizaciones</div>
-    <div class="admin-sidebar-item" data-tab="admin-security"><i class="fa fa-shield-halved"></i>Seguridad</div>
-    <div class="admin-sidebar-item" onclick="window.adminViewAuditLog()"><i class="fa fa-scroll"></i>Auditoría</div>
-    <div class="admin-sidebar-item" id="admin-back"><i class="fa fa-arrow-left"></i>Volver al sitio</div>
-  </div>
-  <div class="admin-content">
-    <div id="admin-overview" class="admin-tab" style="display:block;">
-      <h2 style="font-size:1.5rem;margin-bottom:24px;font-family:'Inter',sans-serif;">Dashboard Administración</h2>
-      <div class="stats-row">
-        <div class="stat-card"><div class="stat-num" style="color:var(--accent);" id="adm-stat-users">0</div><div class="stat-label">Usuarios</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:var(--primary);" id="adm-stat-pros">0</div><div class="stat-label">Profesionales</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:var(--orange);" id="adm-stat-featured">0</div><div class="stat-label">Destacados activos</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:var(--green);" id="adm-stat-jobs">0</div><div class="stat-label">Trabajos realizados</div></div>
-      </div>
-      <div style="margin-top:28px;padding:24px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius);">
-        <p style="color:var(--gray);font-size:0.9rem;line-height:1.8;">
-          <i class="fa fa-circle-info" style="color:var(--accent);margin-right:8px;"></i>
-          Panel de administración de TECNIYA. Usá el menú lateral para gestionar usuarios, profesionales, suscripciones y publicidades.
-        </p>
-      </div>
-    </div>
-    <div id="admin-users" class="admin-tab" style="display:none;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-        <h2 style="font-size:1.3rem;font-family:'Inter',sans-serif;">Usuarios</h2>
-        <input type="text" class="search-input" style="max-width:260px;" placeholder="Buscar usuario..." id="search-users">
-      </div>
-      <div class="admin-table-wrap"><table class="admin-table" id="users-table">
-        <thead><tr><th>ID</th><th>Nombre</th><th>Email</th><th>Rol</th><th>Registro</th><th>Acciones</th></tr></thead>
-        <tbody id="users-tbody"><tr><td colspan="6" style="text-align:center;padding:40px;color:var(--gray);">Cargando...</td></tr></tbody>
-      </table></div>
-    </div>
-    <div id="admin-pros" class="admin-tab" style="display:none;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-        <h2 style="font-size:1.3rem;font-family:'Inter',sans-serif;">Profesionales</h2>
-      </div>
-      <div class="admin-table-wrap"><table class="admin-table" id="pros-table">
-        <thead><tr><th>Nombre</th><th>Especialidad</th><th>Ciudad</th><th>Puntuación</th><th>Destacado</th><th>Acciones</th></tr></thead>
-        <tbody id="pros-tbody"><tr><td colspan="6" style="text-align:center;padding:40px;color:var(--gray);">Cargando...</td></tr></tbody>
-      </table></div>
-    </div>
-    <div id="admin-jobs" class="admin-tab" style="display:none;">
-      <h2 style="font-size:1.3rem;font-family:'Inter',sans-serif;margin-bottom:20px;">Trabajos</h2>
-      <div class="admin-table-wrap"><table class="admin-table">
-        <thead><tr><th>ID</th><th>Cliente</th><th>Profesional</th><th>Especialidad</th><th>Estado</th><th>Fecha</th></tr></thead>
-        <tbody id="jobs-tbody"><tr><td colspan="6" style="text-align:center;padding:40px;color:var(--gray);">Cargando...</td></tr></tbody>
-      </table></div>
-    </div>
-    <div id="admin-subs" class="admin-tab" style="display:none;">
-      <h2 style="font-size:1.3rem;font-family:'Inter',sans-serif;margin-bottom:20px;">Suscripciones</h2>
-      <div class="admin-table-wrap"><table class="admin-table">
-        <thead><tr><th>Profesional</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Estado</th><th>Acciones</th></tr></thead>
-        <tbody id="subs-tbody"><tr><td colspan="6" style="text-align:center;padding:40px;color:var(--gray);">Cargando...</td></tr></tbody>
-      </table></div>
-    </div>
-    <div id="admin-ads" class="admin-tab" style="display:none;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-        <h2 style="font-size:1.3rem;font-family:'Inter',sans-serif;">Publicidades</h2>
-        <button class="btn btn-primary btn-sm" onclick="window.adminNewAd()"><i class="fa fa-plus"></i> Nueva publicidad</button>
-      </div>
-      <div class="admin-table-wrap"><table class="admin-table">
-        <thead><tr><th>Título</th><th>Nivel</th><th>Ubicación</th><th>Link</th><th>Activa</th><th>Acciones</th></tr></thead>
-        <tbody id="ads-tbody"><tr><td colspan="6" style="text-align:center;padding:40px;color:var(--gray);">Cargando...</td></tr></tbody>
-      </table></div>
-    </div>
-
-
-    <div id="admin-security" class="admin-tab" style="display:none;">
-      <h3 style="font-size:1.1rem;margin-bottom:20px;display:flex;align-items:center;gap:10px;">
-        <i class="fa fa-shield-halved" style="color:var(--accent);"></i> Panel de Seguridad
-      </h3>
-
-      <div class="tabs" style="margin-bottom:20px;">
-        <button class="tab active" onclick="window.switchSecurityTab('sec-suspicious')">Cuentas sospechosas</button>
-        <button class="tab" onclick="window.switchSecurityTab('sec-cancels')">Usuarios con cancelaciones</button>
-        <button class="tab" onclick="window.switchSecurityTab('sec-reports')">Pros con reportes</button>
-      </div>
-
-      <div id="sec-suspicious" class="sec-tab-panel">
-        <div class="admin-table-wrap">
-          <table class="admin-table">
-            <thead><tr><th>Nombre</th><th>Email</th><th>Motivo</th><th>Registro</th><th>Acciones</th></tr></thead>
-            <tbody id="suspicious-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div id="sec-cancels" class="sec-tab-panel" style="display:none;">
-        <div class="admin-table-wrap">
-          <table class="admin-table">
-            <thead><tr><th>Nombre</th><th>Email</th><th>Cancelaciones</th><th>Estado</th><th>Acciones</th></tr></thead>
-            <tbody id="cancel-users-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div id="sec-reports" class="sec-tab-panel" style="display:none;">
-        <div class="admin-table-wrap">
-          <table class="admin-table">
-            <thead><tr><th>Profesional</th><th>Especialidad</th><th>Reportes</th><th>Score</th><th>Estado</th><th>Acciones</th></tr></thead>
-            <tbody id="report-pros-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div id="admin-penalties" class="admin-tab" style="display:none;">
-      <h3 style="font-size:1.1rem;margin-bottom:20px;display:flex;align-items:center;gap:10px;">
-        <i class="fa fa-gavel" style="color:var(--orange);"></i> Sistema de Penalizaciones
-      </h3>
-
-      <!-- Stats rápidas -->
-      <div class="stats-row" style="margin-bottom:24px;">
-        <div class="stat-card">
-          <div class="stat-num" id="pen-stat-active" style="color:var(--orange);">—</div>
-          <div class="stat-label">Penalizaciones activas</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-num" id="pen-stat-reports" style="color:#f87171;">—</div>
-          <div class="stat-label">Reportes pendientes</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-num" id="pen-stat-suspended" style="color:var(--gray);">—</div>
-          <div class="stat-label">Suspendidos</div>
-        </div>
-      </div>
-
-      <!-- Tabs internas -->
-      <div class="tabs" style="margin-bottom:20px;">
-        <button class="tab active" onclick="window.switchPenaltyTab('pen-tab-pros')">Profesionales en riesgo</button>
-        <button class="tab" onclick="window.switchPenaltyTab('pen-tab-reports')">Reportes</button>
-        <button class="tab" onclick="window.switchPenaltyTab('pen-tab-history')">Historial</button>
-      </div>
-
-      <!-- Sub-tab: Pros penalizados -->
-      <div id="pen-tab-pros" class="pen-tab-panel">
-        <div class="admin-table-wrap">
-          <table class="admin-table">
-            <thead><tr>
-              <th>Profesional</th><th>Especialidad</th>
-              <th>Score</th><th>Incidentes</th>
-              <th>Estado</th><th>Urgentes</th><th>Acciones</th>
-            </tr></thead>
-            <tbody id="penalized-pros-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Sub-tab: Reportes -->
-      <div id="pen-tab-reports" class="pen-tab-panel" style="display:none;">
-        <div style="display:flex;gap:8px;margin-bottom:16px;">
-          <button class="btn btn-ghost btn-sm report-filter-btn active" data-status="pending" onclick="window.adminFilterReports('pending')">Pendientes</button>
-          <button class="btn btn-ghost btn-sm report-filter-btn" data-status="confirmed" onclick="window.adminFilterReports('confirmed')">Confirmados</button>
-          <button class="btn btn-ghost btn-sm report-filter-btn" data-status="dismissed" onclick="window.adminFilterReports('dismissed')">Desestimados</button>
-          <button class="btn btn-ghost btn-sm report-filter-btn" data-status="all" onclick="window.adminFilterReports('all')">Todos</button>
-        </div>
-        <div class="admin-table-wrap">
-          <table class="admin-table">
-            <thead><tr>
-              <th>ID</th><th>Motivo</th><th>Descripción</th>
-              <th>Fecha</th><th>Estado</th><th>Acciones</th>
-            </tr></thead>
-            <tbody id="reports-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Sub-tab: Historial -->
-      <div id="pen-tab-history" class="pen-tab-panel" style="display:none;">
-        <div class="admin-table-wrap">
-          <table class="admin-table">
-            <thead><tr>
-              <th>ID</th><th>Tipo</th><th>Descripción</th>
-              <th>Delta</th><th>Estado</th><th>Acciones</th>
-            </tr></thead>
-            <tbody id="penalties-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div id="admin-reviews" class="admin-tab" style="display:none;">
-      <h2 style="font-size:1.3rem;font-family:'Inter',sans-serif;margin-bottom:20px;">Reseñas</h2>
-      <div class="admin-table-wrap"><table class="admin-table">
-        <thead><tr><th>Autor</th><th>Profesional</th><th>Puntuación</th><th>Comentario</th><th>Acciones</th></tr></thead>
-        <tbody id="reviews-admin-tbody"><tr><td colspan="5" style="text-align:center;padding:40px;color:var(--gray);">Cargando...</td></tr></tbody>
-      </table></div>
-    </div>
-  </div>
-</div>
-
-<div class="page" id="page-chat">
-  <div class="chat-wrap">
-
-    <!-- SIDEBAR -->
-    <div class="chat-sidebar" id="chat-sidebar">
-      <div class="chat-sidebar-header">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-          <h3 style="font-size:1rem;font-family:'Inter',sans-serif;margin:0;">Mensajes</h3>
-          <button class="btn btn-ghost btn-sm" id="btn-close-chat" title="Cerrar mensajes" style="padding:6px 10px;">
-            <i class="fa fa-xmark"></i>
-          </button>
-        </div>
-        <input type="text" class="chat-search" placeholder="Buscar conversación..." id="chat-search-input">
-      </div>
-      <div class="chat-conversations" id="chat-conversations">
-        <div class="empty-state" style="padding:40px 20px;text-align:center;">
-          <i class="fa fa-comments" style="font-size:2rem;margin-bottom:10px;display:block;color:var(--gray);"></i>
-          <p style="color:var(--gray);font-size:0.88rem;">No tenés conversaciones aún.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- MAIN -->
-    <div class="chat-main" id="chat-main-panel">
-      <div class="chat-header" id="chat-header">
-        <!-- Botón volver (mobile) -->
-        <button class="btn btn-ghost btn-sm" id="btn-chat-back" title="Volver" style="display:none;padding:6px 10px;margin-right:4px;">
-          <i class="fa fa-arrow-left"></i>
-        </button>
-        <div class="chat-conv-avatar" id="chat-header-avatar"></div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;font-size:0.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="chat-header-name"></div>
-          <div style="font-size:0.78rem;color:var(--gray);" id="chat-header-sub"></div>
-        </div>
-        <button class="btn btn-ghost btn-sm" id="btn-close-chat-main" title="Cerrar" style="padding:6px 10px;margin-left:auto;">
-          <i class="fa fa-xmark"></i>
-        </button>
-      </div>
-
-      <div class="chat-messages" id="chat-messages">
-        <div class="chat-empty-conv">
-          <i class="fa fa-comment-dots" style="font-size:2.5rem;color:var(--gray);opacity:0.4;"></i>
-          <p style="color:var(--gray);font-size:0.85rem;">Seleccioná una conversación</p>
-        </div>
-      </div>
-
-      <!-- Presupuesto inline -->
-      <div id="chat-budget-form" style="display:none;padding:12px 16px;border-top:1px solid var(--border);background:rgba(2,6,23,0.9);gap:8px;align-items:center;flex-wrap:wrap;">
-        <input type="text" class="form-input" id="chat-budget-desc" placeholder="Descripción" style="flex:2;min-width:140px;padding:8px 12px;">
-        <div style="display:flex;align-items:center;gap:4px;flex:1;min-width:90px;">
-          <span style="color:var(--gray);">$</span>
-          <input type="number" class="form-input" id="chat-budget-price" placeholder="Precio" style="flex:1;padding:8px 12px;">
-        </div>
-        <button class="btn btn-orange btn-sm" id="btn-submit-chat-budget"><i class="fa fa-paper-plane"></i>Enviar</button>
-        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('chat-budget-form').style.display='none'"><i class="fa fa-times"></i></button>
-      </div>
-
-      <!-- Input -->
-      <div class="chat-input-bar" id="chat-input-bar" style="display:none;">
-        <button class="btn btn-ghost btn-sm chat-tool-btn" id="btn-chat-image" title="Adjuntar foto"><i class="fa fa-image"></i></button>
-        <button class="btn btn-ghost btn-sm chat-tool-btn" id="btn-chat-budget" title="Presupuesto"><i class="fa fa-file-invoice-dollar"></i></button>
-        <input type="file" id="chat-image-input" accept="image/*" style="display:none;">
-        <input type="text" class="chat-input" placeholder="Escribí un mensaje..." id="chat-input-field">
-        <button class="btn btn-primary btn-sm" id="btn-send-chat"><i class="fa fa-paper-plane"></i></button>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<div class="page" id="page-profile-edit">
-  <div class="container" style="padding-top:88px;padding-bottom:60px;max-width:680px;">
-    <button class="btn btn-ghost btn-sm" id="btn-back-profile-edit"><i class="fa fa-arrow-left"></i>Volver</button>
-    <h2 style="font-size:1.5rem;margin-bottom:28px;font-family:'Inter',sans-serif;">Editar mi perfil</h2>
-    <div class="card">
-      <div class="form-group" style="text-align:center;margin-bottom:24px;">
-        <label class="form-label">Foto de perfil <span style="color:#f87171;">*</span></label>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
-          <div id="edit-avatar-preview" class="user-avatar" style="width:100px;height:100px;font-size:2.5rem;border-radius:50%;background:var(--darker);border:3px solid var(--accent);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;background-size:cover;background-position:center;">
-            <i class="fa fa-camera" style="color:var(--gray);"></i>
-          </div>
-          <input type="file" id="edit-avatar-file" accept="image/*" style="display:none;" onchange="window.editAvatarSelected(this)">
-          <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('edit-avatar-file').click()">
-            <i class="fa fa-upload"></i> Subir foto
-          </button>
-          <span style="font-size:0.75rem;color:var(--gray);">La foto es obligatoria</span>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Nombre completo</label>
-        <input type="text" class="form-input" id="edit-name" placeholder="Tu nombre completo">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input type="email" class="form-input" id="edit-email" placeholder="tu@email.com">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Teléfono</label>
-        <input type="tel" class="form-input" id="edit-phone" placeholder="+54 11 1234-5678">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Ciudad</label>
-        <input type="text" class="form-input" id="edit-city" placeholder="Tu ciudad">
-      </div>
-      <button class="btn btn-primary" id="btn-save-profile">Guardar cambios</button>
-    </div>
-  </div>
-</div>
-
-<div class="page" id="page-pro-profile-edit">
-  <div class="container" style="padding-top:88px;padding-bottom:60px;max-width:720px;">
-    <button class="btn btn-ghost btn-sm" id="btn-back-pro-profile-edit"><i class="fa fa-arrow-left"></i>Volver</button>
-    <h2 style="font-size:1.5rem;margin-bottom:28px;font-family:'Inter',sans-serif;">Editar perfil profesional</h2>
-    <div class="card">
-      <div class="form-group" style="text-align:center;margin-bottom:24px;">
-        <label class="form-label">Foto de perfil <span style="color:#f87171;">*</span></label>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
-          <div id="pro-edit-avatar-preview" class="user-avatar" style="width:100px;height:100px;font-size:2.5rem;border-radius:50%;background:var(--darker);border:3px solid var(--accent);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;background-size:cover;background-position:center;">
-            <i class="fa fa-camera" style="color:var(--gray);"></i>
-          </div>
-          <input type="file" id="pro-edit-avatar-file" accept="image/*" style="display:none;" onchange="window.proEditAvatarSelected(this)">
-          <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('pro-edit-avatar-file').click()">
-            <i class="fa fa-upload"></i> Subir foto
-          </button>
-          <span style="font-size:0.75rem;color:var(--gray);">La foto es obligatoria</span>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Nombre profesional</label>
-          <input type="text" class="form-input" id="pro-edit-name">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Especialidad</label>
-          <div id="specialty-chips-editor" class="specialty-chips-editor">
-              <!-- Se rellena dinámicamente con renderSpecialtyEditor() -->
+    <!-- Login -->
+    <div id="loginPage" class="login-page">
+        <div class="login-card">
+            <div class="login-logo">📦</div>
+            <h4 class="text-center mb-1">StockAFM</h4>
+            <p class="text-center text-muted mb-4">Control de inventario</p>
+            
+            <ul class="nav nav-pills mb-3 justify-content-center" id="authTab">
+                <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#login">Ingresar</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#register">Registrarse</button></li>
+            </ul>
+            
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="login">
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="loginEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Contraseña</label>
+                            <input type="password" class="form-control" id="loginPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 py-2">Entrar</button>
+                        <div id="loginError" class="text-danger small mt-2"></div>
+                    </form>
+                </div>
+                <div class="tab-pane fade" id="register">
+                    <form id="registerForm">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="regEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Contraseña</label>
+                            <input type="password" class="form-control" id="regPassword" required minlength="6">
+                        </div>
+                        <button type="submit" class="btn btn-success w-100 py-2">Crear cuenta</button>
+                        <div id="registerError" class="text-danger small mt-2"></div>
+                    </form>
+                </div>
             </div>
-            <p style="font-size:0.75rem;color:var(--gray);margin-top:6px;">Tocá para seleccionar o deseleccionar especialidades</p>
         </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Descripción profesional</label>
-        <textarea class="form-textarea" id="pro-edit-desc" placeholder="Contá tu experiencia, servicios que ofrecés, zona de cobertura..."></textarea>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Ciudad</label>
-          <input type="text" class="form-input" id="pro-edit-city">
+    </div>
+
+    <!-- Sidebar -->
+    <div class="overlay" id="overlay"></div>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h5 class="mb-0">📦 StockAFM</h5>
+            <small>Ferretería</small>
         </div>
-        <div class="form-group">
-          <label class="form-label">Provincia</label>
-          <select class="form-select" id="pro-edit-province">
-            <option value="Buenos Aires">Buenos Aires</option>
-            <option value="Córdoba">Córdoba</option>
-            <option value="Santa Fe">Santa Fe</option>
-            <option value="Mendoza">Mendoza</option>
-          </select>
+        <nav class="sidebar-nav">
+            <button class="sidebar-item active" data-section="inicio"><i class="bi bi-house"></i> Inicio</button>
+            <button class="sidebar-item" data-section="productos"><i class="bi bi-boxes"></i> Productos</button>
+            <button class="sidebar-item" data-section="movimientos"><i class="bi bi-arrow-left-right"></i> Movimientos</button>
+            <button class="sidebar-item" data-section="alertas"><i class="bi bi-exclamation-triangle"></i> Stock Bajo</button>
+            <button class="sidebar-item" data-section="reportes"><i class="bi bi-graph-up"></i> Reportes</button>
+            <a class="sidebar-item" href="importar.html" target="_blank"><i class="bi bi-upload"></i> Importar Stock</a>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="sidebar-item text-danger" id="logoutBtn"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</button>
         </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Zonas donde trabajás (separadas por coma)</label>
-        <input type="text" class="form-input" id="pro-edit-zones" placeholder="Ej: Centro, Palermo, Belgrano">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Certificación <span style="color:var(--gray);font-weight:400;">(PDF o imagen)</span></label>
-        <input type="file" class="form-input" id="pro-cert-file" accept=".pdf,.jpg,.png" style="padding:8px;">
-      </div>
-      <button class="btn btn-primary" id="btn-save-pro-profile">Guardar perfil</button>
-    </div>
-  </div>
-</div>
+    </aside>
 
-<div class="page" id="page-how">
-  <div class="container" style="padding-top:88px;padding-bottom:80px;text-align:center;">
-    <div class="hero-eyebrow" style="display:inline-flex;margin-bottom:20px;"><i class="fa fa-circle-question"></i>¿Cómo funciona?</div>
-    <h2 style="margin-bottom:12px;">Simple, rápido y confiable</h2>
-    <p style="color:var(--gray);max-width:520px;margin:0 auto 60px;">En 3 pasos encontrás el profesional ideal para resolver tu problema.</p>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:24px;max-width:900px;margin:0 auto;">
-      <div class="card" style="text-align:center;padding:36px 24px;">
-        <div style="width:64px;height:64px;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:1.5rem;color:#fff;">1</div>
-        <h3 style="font-size:1.1rem;margin-bottom:10px;">Buscá</h3>
-        <p style="font-size:0.87rem;">Filtrá por especialidad, ciudad y disponibilidad para encontrar el profesional ideal.</p>
-      </div>
-      <div class="card" style="text-align:center;padding:36px 24px;">
-        <div style="width:64px;height:64px;background:linear-gradient(135deg,var(--accent),#0284c7);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:1.5rem;color:#fff;">2</div>
-        <h3 style="font-size:1.1rem;margin-bottom:10px;">Contactá</h3>
-        <p style="font-size:0.87rem;">Escribile directamente, pedí presupuesto o solicitá el trabajo desde la plataforma.</p>
-      </div>
-      <div class="card" style="text-align:center;padding:36px 24px;">
-        <div style="width:64px;height:64px;background:linear-gradient(135deg,var(--green),#059669);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:1.5rem;color:#fff;">3</div>
-        <h3 style="font-size:1.1rem;margin-bottom:10px;">Calificá</h3>
-        <p style="font-size:0.87rem;">Una vez finalizado el trabajo, calificá tu experiencia y ayudá a la comunidad.</p>
-      </div>
-    </div>
-    <div style="margin-top:60px;padding:36px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius);max-width:600px;margin:60px auto 0;">
-      <h3 style="margin-bottom:12px;">¿Sos profesional?</h3>
-      <p style="color:var(--gray);margin-bottom:20px;">Registrate gratis y empezá a recibir solicitudes de trabajo en tu zona.</p>
-      <button class="btn btn-primary" id="btn-register-how">Registrarme como profesional</button>
-    </div>
-  </div>
-</div>
+    <!-- Main App -->
+    <div id="mainApp" style="display:none;">
+        <header class="topbar">
+            <button class="menu-btn" id="menuBtn"><i class="bi bi-list"></i></button>
+            <span class="topbar-title" id="pageTitle">Inicio</span>
+            <div class="topbar-user">
+                <span class="text-muted d-none d-sm-block" id="userEmail"></span>
+            </div>
+        </header>
 
-<footer id="footer">
-  <div class="container">
-    <div class="footer-grid">
-      <div class="footer-brand">
-        <div class="logo-wrap">
-          <div class="logo-icon"><i class="fa fa-wrench"></i></div>
-          <div class="logo-text">TECNIYA</div>
+        <main class="main-content">
+            <!-- Inicio -->
+            <section id="inicioSection" class="fade-in">
+                <div class="p-3">
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <div class="stat-card">
+                                <div class="stat-icon primary"><i class="bi bi-boxes"></i></div>
+                                <div>
+                                    <small class="text-muted">Total Productos</small>
+                                    <h3 class="mb-0" id="totalProductos">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-card">
+                                <div class="stat-icon danger"><i class="bi bi-exclamation-triangle"></i></div>
+                                <div>
+                                    <small class="text-muted">Stock Bajo</small>
+                                    <h3 class="mb-0" id="totalBajoStock">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-card">
+                                <div class="stat-icon success"><i class="bi bi-arrow-down-circle"></i></div>
+                                <div>
+                                    <small class="text-muted">Entradas</small>
+                                    <h3 class="mb-0" id="totalEntradas">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-card">
+                                <div class="stat-icon warning"><i class="bi bi-arrow-up-circle"></i></div>
+                                <div>
+                                    <small class="text-muted">Salidas</small>
+                                    <h3 class="mb-0" id="totalSalidas">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="mb-3">Acciones rápidas</h6>
+                    <div class="quick-actions">
+                        <button class="quick-action entrada" data-action="entrada"><i class="bi bi-plus-circle"></i> Entrada</button>
+                        <button class="quick-action salida" data-action="salida"><i class="bi bi-dash-circle"></i> Salida</button>
+                        <button class="quick-action producto" data-action="producto"><i class="bi bi-plus-lg"></i> Producto</button>
+                        <button class="quick-action reportes" data-action="reportes"><i class="bi bi-file-text"></i> Reporte</button>
+                    </div>
+
+                    <h6 class="mb-3 mt-4">Últimos movimientos</h6>
+                    <div class="table-container">
+                        <table class="table" id="ultimosMovimientosTable">
+                            <thead><tr><th>Producto</th><th>Tipo</th><th>Cant.</th><th>Hora</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                        <div class="empty-state" id="sinMovimientos" style="display:none;">
+                            <i class="bi bi-clock-history"></i>
+                            <p>Sin movimientos recientes</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Productos -->
+            <section id="productosSection" style="display:none;" class="fade-in">
+                <div class="search-box">
+                    <i class="bi bi-search text-muted"></i>
+                    <input type="text" id="searchProductos" placeholder="Buscar productos...">
+                </div>
+                <div class="table-container">
+                    <table class="table" id="productosTable">
+                        <thead><tr><th>Código</th><th>Nombre</th><th>Stock</th><th>Estado</th><th>Acciones</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                    <div class="empty-state" id="sinProductos" style="display:none;">
+                        <i class="bi bi-box"></i>
+                        <p>No hay productos</p>
+                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#productoModal">Crear producto</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Movimientos -->
+            <section id="movimientosSection" style="display:none;" class="fade-in">
+                <div class="search-box">
+                    <i class="bi bi-search text-muted"></i>
+                    <input type="text" id="searchMovimientos" placeholder="Buscar movimientos...">
+                </div>
+                <div class="table-container">
+                    <table class="table" id="movimientosTable">
+                        <thead><tr><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Fecha</th><th>Usuario</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                    <div class="empty-state" id="sinMovimientosCompleto" style="display:none;">
+                        <i class="bi bi-arrow-left-right"></i>
+                        <p>Sin movimientos registrados</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Alertas -->
+            <section id="alertasSection" style="display:none;" class="fade-in">
+                <div class="p-3">
+                    <div class="alert alert-warning d-flex align-items-center mb-3">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <span>Productos con stock por debajo del mínimo</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="table" id="alertasTable">
+                            <thead><tr><th>Producto</th><th>Actual</th><th>Mínimo</th><th>Faltante</th><th>Acción</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                        <div class="empty-state" id="sinAlertas" style="display:none;">
+                            <i class="bi bi-check-circle"></i>
+                            <p>¡Todo el stock está OK!</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reportes -->
+            <section id="reportesSection" style="display:none;" class="fade-in">
+                <div class="p-3">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h6><i class="bi bi-calendar me-2"></i>Filtrar por fecha</h6>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label">Desde</label>
+                                    <input type="date" class="form-control" id="fechaDesde">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Hasta</label>
+                                    <input type="date" class="form-control" id="fechaHasta">
+                                </div>
+                            </div>
+                            <button class="btn btn-primary mt-3 w-100" id="filtrarReporteBtn">Aplicar filtro</button>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <div class="stat-card">
+                                <div class="stat-icon success"><i class="bi bi-arrow-down"></i></div>
+                                <div>
+                                    <small>Total Entradas</small>
+                                    <h4 id="reporteEntradas">0</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-card">
+                                <div class="stat-icon danger"><i class="bi bi-arrow-up"></i></div>
+                                <div>
+                                    <small>Total Salidas</small>
+                                    <h4 id="reporteSalidas">0</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <h6>Movimientos del período</h6>
+                    <div class="table-container">
+                        <table class="table" id="reporteTable">
+                            <thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <div class="app-footer">
+                <p>Creado por <a href="https://afmsolutions.com.ar" target="_blank">AFMSolutions</a></p>
+            </div>
+        </main>
+
+        <!-- Bottom Nav -->
+        <nav class="bottom-nav" id="bottomNav">
+            <button class="bottom-nav-item active" data-section="inicio"><i class="bi bi-house"></i><span>Inicio</span></button>
+            <button class="bottom-nav-item" data-section="productos"><i class="bi bi-boxes"></i><span>Productos</span></button>
+            <button class="bottom-nav-item" data-section="movimientos"><i class="bi bi-arrow-left-right"></i><span>Movimientos</span></button>
+            <button class="bottom-nav-item" data-section="alertas"><i class="bi bi-exclamation-triangle"></i><span>Alertas</span></button>
+        </nav>
+
+        <!-- FAB -->
+        <button class="fab" id="fabBtn" data-bs-toggle="modal" data-bs-target="#movimientoModal">+</button>
+    </div>
+
+    <!-- Modal Producto -->
+    <div class="modal fade" id="productoModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="productoModalTitle">Nuevo Producto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="productoForm">
+                        <input type="hidden" id="productoId">
+                        <div class="mb-3">
+                            <label class="form-label">Código *</label>
+                            <input type="text" class="form-control" id="productoCodigo" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nombre *</label>
+                            <input type="text" class="form-control" id="productoNombre" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Cantidad inicial</label>
+                            <input type="number" class="form-control" id="productoCantidad" value="0" min="0">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ubicación</label>
+                            <input type="text" class="form-control" id="productoUbicacion" placeholder="Ej: Estante A1">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Stock mínimo *</label>
+                            <input type="number" class="form-control" id="productoStockMin" value="5" min="0">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="guardarProductoBtn">Guardar</button>
+                </div>
+            </div>
         </div>
-        <p>La plataforma que conecta usuarios con profesionales técnicos verificados en toda Argentina.</p>
-      </div>
-      <div class="footer-col">
-        <h4>Usuarios</h4>
-        <a href="#" id="footer-register">Registrarse</a>
-        <a href="#" id="footer-how">¿Cómo funciona?</a>
-        <a href="#" id="footer-search">Buscar técnico</a>
-      </div>
-      <div class="footer-col">
-        <h4>Profesionales</h4>
-        <a href="#" id="footer-join">Unirme como profesional</a>
-        <a href="#" id="footer-featured">Plan Destacado</a>
-        <a href="#" id="footer-panel">Mi panel</a>
-      </div>
-      <div class="footer-col">
-        <h4>Empresa</h4>
-        <a href="#">Términos de uso</a>
-        <a href="#">Privacidad</a>
-        <a href="#">Contacto</a>
-      </div>
     </div>
-    <div class="footer-bottom">
-      <p>© 2024 TECNIYA. Aplicación creada por <span class="afm-credit">AFM Solutions</span></p>
-      <p style="font-size:0.78rem;">Todos los derechos reservados</p>
-    </div>
-  </div>
-</footer>
 
-<div class="modal-overlay" id="modal-login">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">Iniciar sesión</div>
-      <button class="modal-close" data-close="modal-login"><i class="fa fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <button class="social-login-btn" id="btn-google-login">
-        <img src="https://www.google.com/favicon.ico" style="width:18px;height:18px;" alt="Google">
-        Continuar con Google
-      </button>
-      <div class="form-divider">o con email</div>
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input type="email" class="form-input" id="login-email" placeholder="tu@email.com" autocomplete="email">
-      </div>
-      <div class="form-group" style="position:relative;">
-        <label class="form-label">Contraseña</label>
-        <input type="password" class="form-input" id="login-pass" placeholder="••••••••" autocomplete="current-password" style="padding-right:44px;">
-        <button type="button" id="toggle-login-pass" onclick="window.togglePassVisibility('login-pass','toggle-login-pass')" style="position:absolute;right:12px;top:34px;background:none;border:none;color:var(--gray);cursor:pointer;"><i class="fa fa-eye"></i></button>
-      </div>
-      <div style="text-align:right;margin-top:-8px;margin-bottom:12px;">
-        <a href="#" id="link-forgot-pass" style="font-size:0.8rem;color:var(--accent);">¿Olvidaste tu contraseña?</a>
-      </div>
-      <div id="login-error" class="form-error hidden"></div>
-      <button class="btn btn-primary btn-block" id="btn-login">Ingresar</button>
-      <p style="text-align:center;margin-top:16px;font-size:0.85rem;color:var(--gray);">¿No tenés cuenta? <a href="#" id="link-to-register" style="color:var(--accent);">Registrarse</a></p>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modal-forgot-pass">
-  <div class="modal" style="max-width:400px;">
-    <div class="modal-header">
-      <div class="modal-title">Recuperar contraseña</div>
-      <button class="modal-close" data-close="modal-forgot-pass"><i class="fa fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <p style="color:var(--gray);font-size:0.88rem;margin-bottom:16px;">Ingresá tu email y te enviaremos un link para restablecer tu contraseña.</p>
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input type="email" class="form-input" id="forgot-email" placeholder="tu@email.com">
-      </div>
-      <div id="forgot-error" class="form-error hidden"></div>
-      <div id="forgot-success" class="form-success hidden" style="color:var(--green);font-size:0.88rem;margin-bottom:12px;padding:10px;background:rgba(16,185,129,0.1);border-radius:8px;"></div>
-      <button class="btn btn-primary btn-block" id="btn-forgot-pass">Enviar link</button>
-      <p style="text-align:center;margin-top:12px;font-size:0.85rem;color:var(--gray);"><a href="#" id="link-back-to-login" style="color:var(--accent);">← Volver al login</a></p>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modal-register">
-  <div class="modal" style="max-width:480px;">
-    <div class="modal-header">
-      <div class="modal-title">Crear cuenta</div>
-      <button class="modal-close" data-close="modal-register"><i class="fa fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-
-      <!-- Selector visual de rol -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;" id="role-selector">
-        <div class="role-card active" id="role-card-user" onclick="window.selectRegisterRole('user')">
-          <div style="font-size:1.8rem;margin-bottom:6px;">🔍</div>
-          <div style="font-weight:600;font-size:0.9rem;">Busco servicios</div>
-          <div style="font-size:0.75rem;color:var(--gray);margin-top:3px;">Soy cliente</div>
+    <!-- Modal Movimiento -->
+    <div class="modal fade" id="movimientoModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="movimientoModalTitle">Nuevo Movimiento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="movimientoForm">
+                        <div class="mb-3">
+                            <label class="form-label">Tipo *</label>
+                            <select class="form-select" id="movimientoTipo" required>
+                                <option value="entrada">Entrada (+)</option>
+                                <option value="salida">Salida (-)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Producto *</label>
+                            <select class="form-select" id="movimientoProducto" required></select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Cantidad *</label>
+                            <input type="number" class="form-control" id="movimientoCantidad" min="1" value="1" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" id="guardarMovimientoBtn">Registrar</button>
+                </div>
+            </div>
         </div>
-        <div class="role-card" id="role-card-professional" onclick="window.selectRegisterRole('professional')">
-          <div style="font-size:1.8rem;margin-bottom:6px;">🔧</div>
-          <div style="font-weight:600;font-size:0.9rem;">Ofrezco servicios</div>
-          <div style="font-size:0.75rem;color:var(--gray);margin-top:3px;">Soy profesional</div>
+    </div>
+
+    <!-- Modal Historial -->
+    <div class="modal fade" id="historialModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="historialModalTitle">Historial del producto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm" id="historialTable">
+                            <thead><tr><th>Tipo</th><th>Cantidad</th><th>Fecha</th><th>Usuario</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                        <p class="text-muted" id="sinHistorial">No hay movimientos para este producto.</p>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-      <input type="hidden" id="reg-role" value="user">
+    </div>
 
-      <button class="social-login-btn" id="btn-google-register">
-        <img src="https://www.google.com/favicon.ico" style="width:18px;height:18px;" alt="Google">
-        Continuar con Google
-      </button>
-      <div class="form-divider">o con email</div>
-
-      <div class="form-group">
-        <label class="form-label">Nombre completo</label>
-        <input type="text" class="form-input" id="reg-name" placeholder="Juan García" autocomplete="name">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input type="email" class="form-input" id="reg-email" placeholder="tu@email.com" autocomplete="email">
-      </div>
-      <div class="form-group" style="position:relative;">
-        <label class="form-label">Contraseña</label>
-        <input type="password" class="form-input" id="reg-pass" placeholder="Mínimo 6 caracteres" autocomplete="new-password" style="padding-right:44px;" oninput="window.checkPassStrength(this.value)">
-        <button type="button" onclick="window.togglePassVisibility('reg-pass','toggle-reg-pass')" id="toggle-reg-pass" style="position:absolute;right:12px;top:34px;background:none;border:none;color:var(--gray);cursor:pointer;"><i class="fa fa-eye"></i></button>
-        <div id="pass-strength-bar" style="height:3px;border-radius:2px;margin-top:6px;background:var(--border);transition:all 0.3s;"><div id="pass-strength-fill" style="height:100%;width:0%;border-radius:2px;transition:all 0.3s;"></div></div>
-        <div id="pass-strength-label" style="font-size:0.75rem;color:var(--gray);margin-top:3px;"></div>
-      </div>
-
-      <!-- Campos extra para profesional (ocultos por defecto) -->
-      <div id="pro-extra-fields" style="display:none;">
-        <div style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.2);border-radius:8px;padding:12px;margin-bottom:14px;font-size:0.82rem;color:var(--orange);">
-          <i class="fa fa-circle-info" style="margin-right:6px;"></i>Completá tu perfil profesional. Podés editarlo después desde tu panel.
+    <!-- Install Prompt -->
+    <div class="install-prompt" id="installPrompt">
+        <i class="bi bi-download fs-4"></i>
+        <div class="flex-grow-1">
+            <strong>Instalar StockAFM</strong>
+            <small class="d-block text-muted">Añadir a pantalla de inicio</small>
         </div>
-        <div class="form-group">
-          <label class="form-label">Especialidad principal</label>
-          <select class="form-select" id="reg-specialty">
-            <option value="">Seleccioná tu especialidad</option>
-          </select>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div class="form-group">
-            <label class="form-label">Ciudad</label>
-            <input type="text" class="form-input" id="reg-city" placeholder="Rosario">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Provincia</label>
-            <input type="text" class="form-input" id="reg-province" placeholder="Santa Fe">
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">WhatsApp <span style="color:var(--gray);font-weight:400;">(opcional)</span></label>
-          <input type="tel" class="form-input" id="reg-whatsapp" placeholder="+54 9 341 000-0000">
-        </div>
-      </div>
-
-      <div id="reg-error" class="form-error hidden"></div>
-      <button class="btn btn-primary btn-block" id="btn-register">Crear cuenta</button>
-      <p style="text-align:center;margin-top:16px;font-size:0.85rem;color:var(--gray);">¿Ya tenés cuenta? <a href="#" id="link-to-login" style="color:var(--accent);">Iniciar sesión</a></p>
+        <button class="btn btn-primary btn-sm" id="installBtn">Instalar</button>
+        <button class="btn btn-close" id="dismissInstall"></button>
     </div>
-  </div>
-</div>
 
-<div class="modal-overlay" id="modal-activate-pro">
-  <div class="modal" style="max-width:440px;">
-    <div class="modal-header">
-      <div class="modal-title">🔧 Activar perfil profesional</div>
-      <button class="modal-close" data-close="modal-activate-pro"><i class="fa fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <p style="color:var(--gray);font-size:0.88rem;margin-bottom:18px;">Completá tus datos para empezar a ofrecer servicios en TECNIYA. Podés editar todo esto después desde tu panel.</p>
-      <div class="form-group">
-        <label class="form-label">Especialidad principal <span style="color:#ef4444;">*</span></label>
-        <select class="form-select" id="activate-specialty">
-          <option value="">Seleccioná tu especialidad</option>
-        </select>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <div class="form-group">
-          <label class="form-label">Ciudad</label>
-          <input type="text" class="form-input" id="activate-city" placeholder="Rosario">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Provincia</label>
-          <input type="text" class="form-input" id="activate-province" placeholder="Santa Fe">
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">WhatsApp <span style="color:var(--gray);font-weight:400;">(opcional)</span></label>
-        <input type="tel" class="form-input" id="activate-whatsapp" placeholder="+54 9 341 000-0000">
-      </div>
-      <div id="activate-pro-error" class="form-error hidden"></div>
-      <button class="btn btn-orange btn-block" id="btn-activate-pro" onclick="window.activateProProfile()"><i class="fa fa-wrench"></i>Activar perfil profesional</button>
-    </div>
-  </div>
-</div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-<div class="modal-overlay" id="modal-choose-role">
-  <div class="modal" style="max-width:440px;">
-    <div class="modal-header" style="border-bottom:none;padding-bottom:0;">
-      <div class="modal-title" style="font-size:1.2rem;">¡Bienvenido/a a TECNIYA! 👋</div>
-    </div>
-    <div class="modal-body" style="padding-top:12px;">
-      <p style="color:var(--gray);font-size:0.9rem;margin-bottom:24px;text-align:center;">¿Cómo vas a usar la plataforma?</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px;">
-        <div onclick="window.chooseRole('user')" style="border:2px solid var(--border);border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer;transition:all 0.2s;" id="choose-card-user"
-          onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-          <div style="font-size:2.5rem;margin-bottom:10px;">🔍</div>
-          <div style="font-weight:700;font-size:0.95rem;margin-bottom:4px;">Busco servicios</div>
-          <div style="font-size:0.78rem;color:var(--gray);">Quiero contratar técnicos y profesionales</div>
-        </div>
-        <div onclick="window.chooseRole('professional')" style="border:2px solid var(--border);border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer;transition:all 0.2s;" id="choose-card-professional"
-          onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border)'">
-          <div style="font-size:2.5rem;margin-bottom:10px;">🔧</div>
-          <div style="font-weight:700;font-size:0.95rem;margin-bottom:4px;">Ofrezco servicios</div>
-          <div style="font-size:0.78rem;color:var(--gray);">Soy técnico o profesional y quiero conseguir clientes</div>
-        </div>
-      </div>
-      <div id="choose-role-pro-fields" style="display:none;border-top:1px solid var(--border);padding-top:16px;margin-top:4px;">
-        <p style="font-size:0.82rem;color:var(--gray);margin-bottom:12px;">Completá algunos datos para tu perfil profesional:</p>
-        <div class="form-group">
-          <label class="form-label">Especialidad principal</label>
-          <select class="form-select" id="choose-specialty">
-            <option value="">Seleccioná tu especialidad</option>
-          </select>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div class="form-group">
-            <label class="form-label">Ciudad</label>
-            <input type="text" class="form-input" id="choose-city" placeholder="Rosario">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Provincia</label>
-            <input type="text" class="form-input" id="choose-province" placeholder="Santa Fe">
-          </div>
-        </div>
-      </div>
-      <div id="choose-role-error" class="form-error hidden"></div>
-      <button class="btn btn-primary btn-block" id="btn-confirm-role" style="display:none;" onclick="window.confirmChosenRole()">Continuar →</button>
-    </div>
-  </div>
-</div>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyC5freZBatfO5zrhhNNFo_nYw7ejfym2aY",
+            authDomain: "ferreteria-sistema.firebaseapp.com",
+            projectId: "ferreteria-sistema",
+            storageBucket: "ferreteria-sistema.firebasestorage.app",
+            messagingSenderId: "122400105302",
+            appId: "1:122400105302:web:36586c69fc2d2b9e71ecf7"
+        };
 
-<div class="modal-overlay" id="modal-urgent">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" style="color:var(--orange);"><i class="fa fa-bolt" style="margin-right:8px;"></i>Técnico Urgente</div>
-      <button class="modal-close" data-close="modal-urgent"><i class="fa fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <div class="urgent-modal-content">
-        <div class="urgent-icon">🆘</div>
-        <p style="color:var(--gray);font-size:0.9rem;margin-bottom:20px;">Encontramos técnicos disponibles cerca tuyo ahora mismo.</p>
-      </div>
-      <div class="form-group">
-        <label class="form-label">¿Qué necesitás?</label>
-        <select class="form-select" id="urgent-specialty">
-          <option value="">Seleccioná especialidad</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Descripción del problema</label>
-        <textarea class="form-textarea" id="urgent-desc" placeholder="Describí brevemente qué pasó..." style="min-height:80px;"></textarea>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Dirección</label>
-        <input type="text" class="form-input" id="urgent-address" placeholder="Calle, número, ciudad">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Radio de búsqueda</label>
-        <select class="form-select" id="urgent-radius">
-          <option value="5">5 km</option>
-          <option value="10" selected>10 km</option>
-          <option value="20">20 km</option>
-          <option value="50">50 km</option>
-        </select>
-      </div>
-      <div id="urgency-map-status" style="padding:12px;background:rgba(6,182,212,0.1);border-radius:8px;margin-bottom:16px;font-size:0.85rem;display:flex;align-items:center;gap:8px;">
-        <i class="fa fa-location-dot" style="color:var(--accent);"></i>
-        <span id="location-status-text">Detectando tu ubicación...</span>
-      </div>
-      <div id="nearby-pros-preview" style="display:none;margin-bottom:16px;">
-        <div style="font-size:0.85rem;color:var(--gray);margin-bottom:8px;">Profesionales disponibles cerca:</div>
-        <div id="nearby-pros-count" style="font-size:1.2rem;font-weight:700;color:var(--green);"></div>
-      </div>
-      <button class="btn btn-orange btn-block btn-lg" id="btn-send-urgent"><i class="fa fa-bolt"></i>Enviar solicitud urgente</button>
-    </div>
-  </div>
-</div>
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
 
-<div class="modal-overlay" id="modal-request-job">
-  <div class="modal" style="max-width:520px;">
-    <div class="modal-header">
-      <div class="modal-title"><i class="fa fa-paper-plane" style="color:var(--accent);margin-right:8px;"></i>Nueva solicitud</div>
-      <button class="modal-close" data-close="modal-request-job"><i class="fa fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <p style="color:var(--gray);font-size:0.88rem;margin-bottom:20px;">Para <strong id="job-req-pro-name" style="color:var(--light);">Profesional</strong></p>
+        // State
+        let currentUser = null;
+        let currentSection = 'inicio';
+        let productos = [];
+        let movimientos = [];
+        let unsubscribeProducts = null;
+        let unsubscribeMovements = null;
 
-      <!-- Paso 1: Descripción -->
-      <div class="form-group">
-        <label class="form-label">¿Qué necesitás? <span style="color:#ef4444;">*</span></label>
-        <textarea class="form-textarea" id="job-req-desc" rows="3" placeholder="Describí el trabajo con el mayor detalle posible..."></textarea>
-      </div>
+        // DOM Elements
+        const loginPage = document.getElementById('loginPage');
+        const mainApp = document.getElementById('mainApp');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+        const bottomNav = document.getElementById('bottomNav');
+        const fab = document.getElementById('fabBtn');
+        const pageTitle = document.getElementById('pageTitle');
 
-      <!-- Adjuntar foto del problema -->
-      <div class="form-group">
-        <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-          <input type="file" id="job-req-photo" accept="image/*" style="display:none;" onchange="window.previewJobPhoto(this)">
-          <span class="btn btn-ghost btn-sm" onclick="document.getElementById('job-req-photo').click()">
-            <i class="fa fa-camera"></i> Adjuntar foto del problema
-          </span>
-          <span id="job-req-photo-name" style="font-size:0.8rem;color:var(--gray);"></span>
-        </label>
-        <img id="job-req-photo-preview" src="" alt="" style="display:none;max-height:120px;border-radius:8px;margin-top:8px;object-fit:cover;">
-      </div>
+        const sections = {
+            inicio: document.getElementById('inicioSection'),
+            productos: document.getElementById('productosSection'),
+            movimientos: document.getElementById('movimientosSection'),
+            alertas: document.getElementById('alertasSection'),
+            reportes: document.getElementById('reportesSection')
+        };
 
-      <div class="form-group">
-        <label class="form-label">Dirección del trabajo</label>
-        <input type="text" class="form-input" id="job-req-address" placeholder="Calle, número, piso...">
-      </div>
+        const titles = {
+            inicio: 'Inicio',
+            productos: 'Productos',
+            movimientos: 'Movimientos',
+            alertas: 'Stock Bajo',
+            reportes: 'Reportes'
+        };
 
-      <!-- Agenda: fechas propuestas -->
-      <div class="form-group">
-        <label class="form-label"><i class="fa fa-calendar" style="color:var(--accent);margin-right:6px;"></i>Fechas disponibles <span style="font-size:0.78rem;color:var(--gray);font-weight:400;">(proponé hasta 3 opciones)</span></label>
-        <div style="display:grid;gap:8px;" id="date-slots">
-          <div style="display:flex;gap:8px;align-items:center;">
-            <input type="datetime-local" class="form-input slot-date">
-            <select class="form-select slot-period">
-              <option value="mañana">Mañana</option>
-              <option value="tarde">Tarde</option>
-              <option value="noche">Noche</option>
-              <option value="flexible">Flexible</option>
-            </select>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <input type="datetime-local" class="form-input slot-date">
-            <select class="form-select slot-period">
-              <option value="mañana">Mañana</option>
-              <option value="tarde">Tarde</option>
-              <option value="noche">Noche</option>
-              <option value="flexible">Flexible</option>
-            </select>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <input type="datetime-local" class="form-input slot-date">
-            <select class="form-select slot-period">
-              <option value="mañana">Mañana</option>
-              <option value="tarde">Tarde</option>
-              <option value="noche">Noche</option>
-              <option value="flexible">Flexible</option>
-            </select>
-          </div>
-        </div>
-        <p style="font-size:0.76rem;color:var(--gray);margin-top:6px;">El profesional va a confirmar una de estas fechas.</p>
-      </div>
+        // PWA Install
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', e => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installPrompt').classList.add('show');
+        });
+        document.getElementById('installBtn').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                document.getElementById('installPrompt').classList.remove('show');
+            }
+        });
+        document.getElementById('dismissInstall').addEventListener('click', () => {
+            document.getElementById('installPrompt').classList.remove('show');
+        });
 
-      <!-- Urgente -->
-      <div class="form-group">
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.9rem;">
-          <input type="checkbox" id="job-req-urgent" style="accent-color:#ef4444;width:16px;height:16px;">
-          <span><i class="fa fa-bolt" style="color:#ef4444;margin-right:4px;"></i>Es urgente <span style="color:var(--gray);font-size:0.8rem;">(cargo adicional puede aplicar)</span></span>
-        </label>
-      </div>
+        // Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
 
-      <div id="job-req-error" class="form-error hidden"></div>
-      <button class="btn btn-primary btn-block" id="btn-submit-job"><i class="fa fa-paper-plane"></i>Enviar solicitud</button>
-    </div>
-  </div>
-</div>
+        // Auth
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('userEmail').textContent = user.email;
+                loginPage.style.display = 'none';
+                mainApp.style.display = 'block';
+                checkScreenSize();
+                subscribeData();
+                showSection('inicio');
+            } else {
+                loginPage.style.display = 'flex';
+                mainApp.style.display = 'none';
+                if (unsubscribeProducts) unsubscribeProducts();
+                if (unsubscribeMovements) unsubscribeMovements();
+            }
+        });
 
-<!-- FEATURE 3: Modal confirmación de cierre por cliente -->
-<div class="modal-overlay" id="modal-confirm-finish">
-  <div class="modal" style="max-width:440px;">
-    <div class="modal-header" style="border-bottom:none;">
-      <div class="modal-title" style="font-size:1.1rem;">✅ ¿El trabajo quedó terminado?</div>
-    </div>
-    <div class="modal-body">
-      <p style="color:var(--gray);font-size:0.88rem;margin-bottom:20px;">Confirmá que el profesional terminó el trabajo correctamente para liberar el cierre.</p>
-      <div class="form-group">
-        <label class="form-label">Comentario opcional</label>
-        <textarea class="form-textarea" id="confirm-finish-comment" rows="2" placeholder="¿Algo que quieras destacar?"></textarea>
-      </div>
-      <div style="display:flex;gap:10px;">
-        <button class="btn btn-success btn-block" id="btn-confirm-finish-yes" onclick="window.clientConfirmFinish(true)"><i class="fa fa-check"></i>Sí, está terminado</button>
-        <button class="btn btn-ghost" style="min-width:120px;" onclick="window.clientConfirmFinish(false)"><i class="fa fa-times"></i>Hay problemas</button>
-      </div>
-    </div>
-  </div>
-</div>
+        document.getElementById('loginForm').addEventListener('submit', e => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            auth.signInWithEmailAndPassword(email, password)
+                .catch(err => document.getElementById('loginError').textContent = err.message);
+        });
 
-<!-- Modal disputa -->
-<div class="modal-overlay" id="modal-dispute">
-  <div class="modal" style="max-width:440px;">
-    <div class="modal-header">
-      <div class="modal-title"><i class="fa fa-triangle-exclamation" style="color:#f59e0b;margin-right:8px;"></i>Reportar problema</div>
-      <button class="modal-close" data-close="modal-dispute"><i class="fa fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <p style="color:var(--gray);font-size:0.88rem;margin-bottom:16px;">Describí el problema. El equipo de TECNIYA va a mediar.</p>
-      <div class="form-group">
-        <label class="form-label">¿Qué pasó?</label>
-        <textarea class="form-textarea" id="dispute-desc" rows="3" placeholder="Describí el inconveniente con detalle..."></textarea>
-      </div>
-      <div id="dispute-job-id" style="display:none;"></div>
-      <button class="btn btn-orange btn-block" onclick="window.submitDispute()"><i class="fa fa-paper-plane"></i>Enviar reporte</button>
-    </div>
-  </div>
-</div>
+        document.getElementById('registerForm').addEventListener('submit', e => {
+            e.preventDefault();
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            auth.createUserWithEmailAndPassword(email, password)
+                .catch(err => document.getElementById('registerError').textContent = err.message);
+        });
 
-<div class="modal-overlay" id="modal-rating">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">Calificar servicio</div>
-      <button class="modal-close" data-close="modal-rating"><i class="fa fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <p style="color:var(--gray);font-size:0.88rem;margin-bottom:24px;">¿Cómo fue tu experiencia con <strong id="rate-pro-name" style="color:var(--light);">el profesional</strong>?</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
-        <div><div style="font-size:0.82rem;color:var(--gray);margin-bottom:6px;">Puntualidad</div><div class="rating-input-stars" id="stars-puntualidad" data-category="puntualidad"><i class="fa fa-star star" data-v="1"></i><i class="fa fa-star star" data-v="2"></i><i class="fa fa-star star" data-v="3"></i><i class="fa fa-star star" data-v="4"></i><i class="fa fa-star star" data-v="5"></i></div></div>
-        <div><div style="font-size:0.82rem;color:var(--gray);margin-bottom:6px;">Calidad</div><div class="rating-input-stars" id="stars-calidad" data-category="calidad"><i class="fa fa-star star" data-v="1"></i><i class="fa fa-star star" data-v="2"></i><i class="fa fa-star star" data-v="3"></i><i class="fa fa-star star" data-v="4"></i><i class="fa fa-star star" data-v="5"></i></div></div>
-        <div><div style="font-size:0.82rem;color:var(--gray);margin-bottom:6px;">Precio</div><div class="rating-input-stars" id="stars-precio" data-category="precio"><i class="fa fa-star star" data-v="1"></i><i class="fa fa-star star" data-v="2"></i><i class="fa fa-star star" data-v="3"></i><i class="fa fa-star star" data-v="4"></i><i class="fa fa-star star" data-v="5"></i></div></div>
-        <div><div style="font-size:0.82rem;color:var(--gray);margin-bottom:6px;">Comunicación</div><div class="rating-input-stars" id="stars-comunicacion" data-category="comunicacion"><i class="fa fa-star star" data-v="1"></i><i class="fa fa-star star" data-v="2"></i><i class="fa fa-star star" data-v="3"></i><i class="fa fa-star star" data-v="4"></i><i class="fa fa-star star" data-v="5"></i></div></div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Comentario</label>
-        <textarea class="form-textarea" id="rate-comment" placeholder="Contá tu experiencia..."></textarea>
-      </div>
-      <button class="btn btn-primary btn-block" id="btn-submit-rating">Enviar calificación</button>
-    </div>
-  </div>
-</div>
+        document.getElementById('logoutBtn').addEventListener('click', () => auth.signOut());
 
-<div class="modal-overlay" id="modal-subscription">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title"><i class="fa fa-crown" style="color:var(--orange);margin-right:8px;"></i>Plan Destacado</div>
-      <button class="modal-close" data-close="modal-subscription"><i class="fa fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <div class="sub-card">
-        <div style="font-size:0.8rem;color:var(--orange);font-weight:700;text-transform:uppercase;letter-spacing:1px;">Plan Destacado</div>
-        <div class="sub-price">$5.000</div>
-        <div class="sub-period">por mes</div>
-        <ul class="sub-features">
-          <li><i class="fa fa-check"></i>Aparecer primero en búsquedas</li>
-          <li><i class="fa fa-check"></i>Badge "Destacado" en tu perfil</li>
-          <li><i class="fa fa-check"></i>Crear y enviar presupuestos PDF</li>
-          <li><i class="fa fa-check"></i>Mayor visibilidad en tu zona</li>
-          <li><i class="fa fa-check"></i>Enviar presupuestos por WhatsApp</li>
-          <li><i class="fa fa-check"></i>Estadísticas avanzadas</li>
-        </ul>
-      </div>
-      <button class="btn btn-orange btn-block btn-lg" style="margin-top:20px;" id="btn-subscribe"><i class="fa fa-crown"></i>Activar Plan Destacado</button>
-    </div>
-  </div>
-</div>
+        // Navigation
+        function checkScreenSize() {
+            if (window.innerWidth >= 992) {
+                bottomNav.classList.remove('show');
+                sidebar.classList.add('open');
+            } else {
+                bottomNav.classList.add('show');
+                sidebar.classList.remove('open');
+            }
+        }
 
+        window.addEventListener('resize', checkScreenSize);
 
+        document.getElementById('menuBtn').addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('show');
+        });
 
-<div class="modal-overlay" id="modal-new-budget">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">Nuevo Presupuesto</div>
-      <button class="modal-close" data-close="modal-new-budget"><i class="fa fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label class="form-label">Cliente</label>
-        <input type="text" class="form-input" id="budget-client" placeholder="Nombre del cliente">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Descripción del trabajo</label>
-        <textarea class="form-textarea" id="budget-desc" placeholder="Detallá el trabajo a realizar..."></textarea>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Precio</label>
-          <input type="number" class="form-input" id="budget-price" placeholder="$0">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Fecha</label>
-          <input type="date" class="form-input" id="budget-date">
-        </div>
-      </div>
-      <div style="display:flex;gap:10px;">
-        <button class="btn btn-primary" style="flex:1;" id="btn-save-budget"><i class="fa fa-save"></i>Guardar</button>
-        <button class="btn btn-ghost" id="btn-pdf-budget"><i class="fa fa-file-pdf"></i>PDF</button>
-      </div>
-    </div>
-  </div>
-</div>
+        overlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('show');
+        });
 
-<div class="pwa-banner pwa-banner-hidden" id="pwa-banner">
-  <div style="width:40px;height:40px;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;"><i class="fa fa-wrench" style="color:#fff;"></i></div>
-  <div style="flex:1;">
-    <div style="font-family:'Inter',sans-serif;font-weight:700;font-size:0.9rem;">Instalá TECNIYA</div>
-    <div style="font-size:0.78rem;color:var(--gray);">Accedé más rápido desde tu pantalla de inicio</div>
-  </div>
-  <button class="btn btn-primary btn-sm" id="btn-install-pwa">Instalar</button>
-  <button id="btn-close-pwa" style="background:none;border:none;color:var(--gray);cursor:pointer;font-size:1rem;"><i class="fa fa-times"></i></button>
-</div>
+        function showSection(section) {
+            currentSection = section;
+            pageTitle.textContent = titles[section];
+            
+            Object.keys(sections).forEach(k => sections[k].style.display = 'none');
+            sections[section].style.display = 'block';
 
-<script type="module" src="js/main.js"></script>
+            document.querySelectorAll('.sidebar-item').forEach(el => {
+                el.classList.toggle('active', el.dataset.section === section);
+            });
+            document.querySelectorAll('.bottom-nav-item').forEach(el => {
+                el.classList.toggle('active', el.dataset.section === section);
+            });
 
-<!-- Modal cancelar trabajo (cliente) -->
-<div class="modal-overlay" id="modal-cancel-job">
-  <div class="modal" style="max-width:420px;">
-    <div class="modal-header">
-      <div class="modal-title" id="cancel-modal-title"><i class="fa fa-times-circle" style="color:#ef4444;margin-right:8px;"></i>Cancelar solicitud</div>
-      <button class="modal-close" data-close="modal-cancel-job"><i class="fa fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <p id="cancel-modal-hint" style="color:var(--gray);font-size:0.88rem;margin-bottom:18px;">El profesional será notificado.</p>
-      <div class="form-group">
-        <label class="form-label">Motivo de la cancelación <span style="color:var(--gray);font-weight:400;">(opcional)</span></label>
-        <select class="form-select" id="cancel-reason-select" onchange="window.syncCancelReason(this.value)" style="margin-bottom:8px;">
-          <option value="">— Elegí un motivo —</option>
-          <option value="Conseguí a alguien más">Conseguí a alguien más</option>
-          <option value="El trabajo ya no es necesario">El trabajo ya no es necesario</option>
-          <option value="Cambié de opinión">Cambié de opinión</option>
-          <option value="Tarda demasiado en responder">Tarda demasiado en responder</option>
-          <option value="Otro">Otro (detallá abajo)</option>
-        </select>
-        <textarea class="form-textarea" id="cancel-reason" rows="2" placeholder="Podés agregar un detalle..."></textarea>
-      </div>
-      <div style="display:flex;gap:10px;">
-        <button class="btn btn-danger btn-block" onclick="window.cancelJob()"><i class="fa fa-times-circle"></i>Confirmar cancelación</button>
-        <button class="btn btn-ghost" style="min-width:100px;" data-close="modal-cancel-job">Volver</button>
-      </div>
-    </div>
-  </div>
-</div>
+            // Show/hide FAB
+            fab.classList.toggle('show', ['productos', 'movimientos'].includes(section));
 
-<!-- Modal rechazar trabajo (pro) -->
-<div class="modal-overlay" id="modal-reject-job">
-  <div class="modal" style="max-width:420px;">
-    <div class="modal-header">
-      <div class="modal-title"><i class="fa fa-times-circle" style="color:#ef4444;margin-right:8px;"></i>Rechazar solicitud</div>
-      <button class="modal-close" data-close="modal-reject-job"><i class="fa fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <p style="color:var(--gray);font-size:0.88rem;margin-bottom:18px;">El cliente recibirá una notificación con tu motivo.</p>
-      <div class="form-group">
-        <label class="form-label">Motivo <span style="color:var(--gray);font-weight:400;">(opcional pero recomendado)</span></label>
-        <select class="form-select" id="reject-reason-select" onchange="window.syncRejectReason(this.value)" style="margin-bottom:8px;">
-          <option value="">— Elegí un motivo —</option>
-          <option value="No tengo disponibilidad en esa fecha">No tengo disponibilidad en esa fecha</option>
-          <option value="La zona queda fuera de mi área de trabajo">La zona queda fuera de mi área</option>
-          <option value="El trabajo no es de mi especialidad">No es mi especialidad</option>
-          <option value="Estoy completo de trabajos por ahora">Estoy completo de trabajos</option>
-          <option value="Otro">Otro (detallá abajo)</option>
-        </select>
-        <textarea class="form-textarea" id="reject-reason" rows="2" placeholder="Podés agregar más detalle..."></textarea>
-      </div>
-      <div style="display:flex;gap:10px;">
-        <button class="btn btn-danger btn-block" onclick="window.rejectJob()"><i class="fa fa-times"></i>Rechazar solicitud</button>
-        <button class="btn btn-ghost" style="min-width:100px;" data-close="modal-reject-job">Volver</button>
-      </div>
-    </div>
-  </div>
-</div>
+            sidebar.classList.remove('open');
+            overlay.classList.remove('show');
+        }
 
+        document.querySelectorAll('.sidebar-item[data-section], .bottom-nav-item').forEach(el => {
+            el.addEventListener('click', (e) => {
+                if (el.dataset.section) {
+                    showSection(el.dataset.section);
+                }
+            });
+        });
 
-<!-- Barra solicitud múltiple -->
-<div id="multi-request-bar" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:1800;
-  background:var(--glass);backdrop-filter:blur(20px);border:1px solid var(--accent);border-radius:14px;
-  padding:12px 20px;align-items:center;gap:14px;box-shadow:0 8px 32px rgba(6,182,212,0.2);
-  max-width:90vw;flex-wrap:wrap;">
-  <i class="fa fa-users" style="color:var(--accent);font-size:1.1rem;"></i>
-  <span id="multi-req-label" style="font-size:0.88rem;color:var(--light);flex:1;min-width:0;"></span>
-  <button id="multi-req-send-btn" class="btn btn-primary btn-sm" onclick="window.openMultiRequest()">
-    <i class="fa fa-paper-plane"></i> Enviar solicitud
-  </button>
-  <button class="btn btn-ghost btn-sm" onclick="window.clearMultiSelection()" title="Limpiar selección">
-    <i class="fa fa-times"></i>
-  </button>
-</div>
+        // Quick Actions
+        document.querySelectorAll('.quick-action').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const action = btn.dataset.action;
+                if (action === 'entrada') {
+                    document.getElementById('movimientoTipo').value = 'entrada';
+                    showSection('movimientos');
+                    new bootstrap.Modal(document.getElementById('movimientoModal')).show();
+                } else if (action === 'salida') {
+                    document.getElementById('movimientoTipo').value = 'salida';
+                    showSection('movimientos');
+                    new bootstrap.Modal(document.getElementById('movimientoModal')).show();
+                } else if (action === 'producto') {
+                    showSection('productos');
+                    new bootstrap.Modal(document.getElementById('productoModal')).show();
+                } else if (action === 'reportes') {
+                    showSection('reportes');
+                }
+            });
+        });
 
+        // Data Subscription
+        function subscribeData() {
+            unsubscribeProducts = db.collection('productos').onSnapshot(snap => {
+                productos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderAll();
+            });
 
-<!-- Modal: pro propone fecha alternativa -->
-<div class="modal-overlay" id="modal-propose-date">
-  <div class="modal" style="max-width:400px;">
-    <div class="modal-header">
-      <div class="modal-title"><i class="fa fa-calendar-plus" style="color:var(--accent);margin-right:8px;"></i>Proponer otra fecha</div>
-      <button class="modal-close" data-close="modal-propose-date"><i class="fa fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <p style="color:var(--gray);font-size:0.88rem;margin-bottom:16px;">Ninguna fecha del cliente te sirve. Proponé una alternativa — el cliente la aprobará o rechazará.</p>
-      <div class="form-group">
-        <label class="form-label">Fecha y hora</label>
-        <input type="datetime-local" class="form-input" id="pro-date-input">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Turno</label>
-        <select class="form-select" id="pro-period-input">
-          <option value="mañana">Mañana</option>
-          <option value="tarde">Tarde</option>
-          <option value="noche">Noche</option>
-          <option value="flexible">Flexible</option>
-        </select>
-      </div>
-      <button class="btn btn-primary btn-block" onclick="window.submitProposedDate()"><i class="fa fa-paper-plane"></i>Enviar propuesta</button>
-    </div>
-  </div>
-</div>
+            unsubscribeMovements = db.collection('movimientos').orderBy('fecha', 'desc').onSnapshot(snap => {
+                movimientos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderAll();
+            });
+        }
 
-<!-- Modal: reporte de garantía (cliente) -->
-<div class="modal-overlay" id="modal-warranty-report">
-  <div class="modal" style="max-width:440px;">
-    <div class="modal-header">
-      <div class="modal-title"><i class="fa fa-shield-halved" style="color:#f59e0b;margin-right:8px;"></i>Reportar problema — Garantía</div>
-      <button class="modal-close" data-close="modal-warranty-report"><i class="fa fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <p style="color:var(--gray);font-size:0.88rem;margin-bottom:16px;">Estás dentro del período de garantía de 7 días. El equipo de TECNIYA mediará entre vos y el profesional en un plazo de 48h.</p>
-      <div class="form-group">
-        <label class="form-label">¿Qué problema encontraste?</label>
-        <textarea class="form-textarea" id="warranty-desc" rows="3" placeholder="Describí el problema con detalle..."></textarea>
-      </div>
-      <button class="btn btn-orange btn-block" onclick="window.submitWarrantyReport()"><i class="fa fa-paper-plane"></i>Enviar reporte</button>
-    </div>
-  </div>
-</div>
+        function renderAll() {
+            renderDashboard();
+            renderProductos();
+            renderMovimientos();
+            renderAlertas();
+            renderReportes();
+        }
 
-<!-- Mini-chat pre-aceptación: botón en jobItem para abrir -->
+        function renderDashboard() {
+            document.getElementById('totalProductos').textContent = productos.length;
+            
+            const bajoStock = productos.filter(p => p.cantidad < p.stockMinimo).length;
+            document.getElementById('totalBajoStock').textContent = bajoStock;
 
+            const entradas = movimientos.filter(m => m.tipo === 'entrada').length;
+            const salidas = movimientos.filter(m => m.tipo === 'salida').length;
+            document.getElementById('totalEntradas').textContent = entradas;
+            document.getElementById('totalSalidas').textContent = salidas;
 
-<!-- ═══ CHAT FLOTANTE ═══════════════════════════════════════════════════════ -->
-<div id="fchat-bubble" class="fchat-bubble hidden" onclick="window.toggleFloatChat()">
-  <i class="fa fa-comment-dots"></i>
-  <span class="fchat-badge hidden" id="fchat-badge">0</span>
-</div>
+            const tbody = document.querySelector('#ultimosMovimientosTable tbody');
+            const ultimos = movimientos.slice(0, 5);
+            if (ultimos.length === 0) {
+                tbody.innerHTML = '';
+                document.getElementById('sinMovimientos').style.display = 'block';
+            } else {
+                document.getElementById('sinMovimientos').style.display = 'none';
+                tbody.innerHTML = ultimos.map(m => {
+                    const fecha = m.fecha ? new Date(m.fecha.seconds * 1000) : null;
+                    const hora = fecha ? fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '';
+                    return `<tr>
+                        <td>${m.productoNombre || '?'}</td>
+                        <td><span class="movement-badge ${m.tipo === 'entrada' ? 'movement-entrada' : 'movement-salida'}">
+                            <i class="bi bi-arrow-${m.tipo === 'entrada' ? 'down' : 'up'}-circle"></i> ${m.tipo}
+                        </span></td>
+                        <td>${m.cantidad}</td>
+                        <td>${hora}</td>
+                    </tr>`;
+                }).join('');
+            }
+        }
 
-<div id="fchat-panel" class="fchat-panel">
-  <!-- Cabecera del panel -->
-  <div class="fchat-panel-header">
-    <div class="fchat-panel-header-left">
-      <i class="fa fa-comment-dots" style="color:var(--accent);"></i>
-      <span class="fchat-panel-title">Mensajes</span>
-    </div>
-    <div style="display:flex;gap:6px;align-items:center;">
-      <button class="fchat-icon-btn" id="fchat-new-btn" title="Nueva conversación" onclick="window.fchatGoList()">
-        <i class="fa fa-pencil"></i>
-      </button>
-      <button class="fchat-icon-btn" onclick="window.toggleFloatChat()">
-        <i class="fa fa-chevron-down"></i>
-      </button>
-    </div>
-  </div>
+        function renderProductos() {
+            const search = document.getElementById('searchProductos')?.value.toLowerCase() || '';
+            const filtered = productos.filter(p => 
+                p.nombre?.toLowerCase().includes(search) || 
+                p.codigo?.toLowerCase().includes(search)
+            );
 
-  <!-- Vista: lista de conversaciones -->
-  <div id="fchat-view-list" class="fchat-view">
-    <div class="fchat-search-wrap">
-      <i class="fa fa-search fchat-search-icon"></i>
-      <input class="fchat-search" id="fchat-search" placeholder="Buscar conversación..." oninput="window.fchatSearch(this.value)">
-    </div>
-    <div class="fchat-conv-list" id="fchat-conv-list">
-      <div class="fchat-empty"><i class="fa fa-comments"></i><p>Sin conversaciones aún</p></div>
-    </div>
-  </div>
+            const tbody = document.querySelector('#productosTable tbody');
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                document.getElementById('sinProductos').style.display = 'block';
+            } else {
+                document.getElementById('sinProductos').style.display = 'none';
+                tbody.innerHTML = filtered.map(p => {
+                    let stockClass = 'stock-ok';
+                    if (p.cantidad < p.stockMinimo) stockClass = p.cantidad === 0 ? 'stock-critical' : 'stock-low';
+                    return `<tr>
+                        <td><strong>${p.codigo || ''}</strong></td>
+                        <td>${p.nombre || ''}</td>
+                        <td>${p.cantidad || 0}</td>
+                        <td><span class="stock-badge ${stockClass}">${p.cantidad < p.stockMinimo ? 'Bajo' : 'OK'}</span></td>
+                        <td>
+                            <button class="btn btn-icon btn-icon-primary editar-producto" data-id="${p.id}"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-icon btn-icon-danger eliminar-producto" data-id="${p.id}"><i class="bi bi-trash"></i></button>
+                            <button class="btn btn-icon btn-icon-info ver-historial" data-id="${p.id}" data-nombre="${p.nombre}"><i class="bi bi-clock-history"></i></button>
+                        </td>
+                    </tr>`;
+                }).join('');
+            }
 
-  <!-- Vista: chat abierto -->
-  <div id="fchat-view-chat" class="fchat-view fchat-view--hidden">
-    <div class="fchat-chat-header" id="fchat-chat-header">
-      <button class="fchat-icon-btn" onclick="window.fchatGoList()">
-        <i class="fa fa-arrow-left"></i>
-      </button>
-      <div class="fchat-chat-avatar" id="fchat-chat-avatar">?</div>
-      <div class="fchat-chat-info">
-        <div class="fchat-chat-name" id="fchat-chat-name">—</div>
-        <div class="fchat-chat-sub" id="fchat-chat-sub"></div>
-      </div>
-    </div>
-    <!-- Banner pre-aceptación -->
-    <div id="fchat-pre-banner" class="pre-acceptance-banner hidden"></div>
-    <!-- Mensajes -->
-    <div class="fchat-messages" id="fchat-messages"></div>
-    <!-- Input -->
-    <div class="fchat-input-bar">
-      <button class="fchat-icon-btn" onclick="window.fchatSendImage()" title="Imagen">
-        <i class="fa fa-image"></i>
-      </button>
-      <input class="fchat-input" id="fchat-input" placeholder="Escribí un mensaje..."
-             onkeydown="window.fchatKeydown(event)">
-      <button class="fchat-send-btn" onclick="window.fchatSend()" id="fchat-send-btn">
-        <i class="fa fa-paper-plane"></i>
-      </button>
-    </div>
-    <input type="file" id="fchat-image-input" accept="image/*" style="display:none">
-  </div>
-</div>
+            document.querySelectorAll('.editar-producto').forEach(b => b.addEventListener('click', () => editarProducto(b.dataset.id)));
+            document.querySelectorAll('.eliminar-producto').forEach(b => b.addEventListener('click', () => eliminarProducto(b.dataset.id)));
+            document.querySelectorAll('.ver-historial').forEach(b => b.addEventListener('click', () => verHistorial(b.dataset.id)));
+        }
 
+        document.getElementById('searchProductos')?.addEventListener('input', renderProductos);
 
-<!-- Modal: aplicar penalización manual -->
-<div class="modal-overlay" id="modal-penalty">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 class="modal-title" id="penalty-modal-title">Aplicar penalización</h3>
-      <button class="modal-close" onclick="document.getElementById('modal-penalty').classList.remove('open')"><i class="fa fa-xmark"></i></button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="penalty-modal-pro-id">
-      <div class="form-group">
-        <label class="form-label">Tipo de penalización</label>
-        <select class="form-select" id="penalty-modal-type">
-          <option value="warning">⚠️ Advertencia (sin bajar score)</option>
-          <option value="cancel">❌ Cancelación (-10 score)</option>
-          <option value="no_response">⏱ Sin respuesta (-3 score)</option>
-          <option value="bad_review">⭐ Mala reseña (-8 score)</option>
-          <option value="report">🚨 Reporte confirmado (-15 score)</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Motivo / descripción</label>
-        <textarea class="form-textarea" id="penalty-modal-desc" placeholder="Describí el motivo de la penalización..."></textarea>
-      </div>
-      <button class="btn btn-danger btn-block" onclick="window.adminSubmitPenalty()">
-        <i class="fa fa-gavel"></i> Aplicar penalización
-      </button>
-    </div>
-  </div>
-</div>
+        function renderMovimientos() {
+            const search = document.getElementById('searchMovimientos')?.value.toLowerCase() || '';
+            const filtered = movimientos.filter(m => 
+                m.productoNombre?.toLowerCase().includes(search)
+            );
 
-<!-- Modal: suspender profesional -->
-<div class="modal-overlay" id="modal-suspend">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 class="modal-title" id="suspend-modal-title">Suspender profesional</h3>
-      <button class="modal-close" onclick="document.getElementById('modal-suspend').classList.remove('open')"><i class="fa fa-xmark"></i></button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="suspend-modal-pro-id">
-      <div class="form-group">
-        <label class="form-label">Duración (días)</label>
-        <select class="form-select" id="suspend-modal-days">
-          <option value="3">3 días</option>
-          <option value="7" selected>7 días</option>
-          <option value="15">15 días</option>
-          <option value="30">30 días</option>
-          <option value="0">Indefinido</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Motivo</label>
-        <textarea class="form-textarea" id="suspend-modal-reason" placeholder="Motivo de la suspensión..."></textarea>
-      </div>
-      <button class="btn btn-danger btn-block" onclick="window.adminSubmitSuspend()">
-        <i class="fa fa-ban"></i> Confirmar suspensión
-      </button>
-    </div>
-  </div>
-</div>
+            const tbody = document.querySelector('#movimientosTable tbody');
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                document.getElementById('sinMovimientosCompleto').style.display = 'block';
+            } else {
+                document.getElementById('sinMovimientosCompleto').style.display = 'none';
+                tbody.innerHTML = filtered.map(m => {
+                    const fecha = m.fecha ? new Date(m.fecha.seconds * 1000).toLocaleString('es-AR') : '';
+                    return `<tr>
+                        <td>${m.productoNombre || '?'}</td>
+                        <td><span class="movement-badge ${m.tipo === 'entrada' ? 'movement-entrada' : 'movement-salida'}">
+                            <i class="bi bi-arrow-${m.tipo === 'entrada' ? 'down' : 'up'}-circle"></i> ${m.tipo}
+                        </span></td>
+                        <td>${m.cantidad}</td>
+                        <td><small>${fecha}</small></td>
+                        <td><small>${m.usuario?.split('@')[0] || ''}</small></td>
+                    </tr>`;
+                }).join('');
+            }
+        }
 
-<!-- Modal: historial de penalizaciones de un pro -->
-<div class="modal-overlay" id="modal-penalty-history">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 class="modal-title">Historial de penalizaciones</h3>
-      <button class="modal-close" onclick="document.getElementById('modal-penalty-history').classList.remove('open')"><i class="fa fa-xmark"></i></button>
-    </div>
-    <div class="modal-body">
-      <div id="penalty-history-list" style="display:flex;flex-direction:column;gap:10px;"></div>
-    </div>
-  </div>
-</div>
+        document.getElementById('searchMovimientos')?.addEventListener('input', renderMovimientos);
 
+        function renderAlertas() {
+            const alerts = productos.filter(p => p.cantidad < p.stockMinimo);
+            const tbody = document.querySelector('#alertasTable tbody');
+            
+            if (alerts.length === 0) {
+                tbody.innerHTML = '';
+                document.getElementById('sinAlertas').style.display = 'block';
+            } else {
+                document.getElementById('sinAlertas').style.display = 'none';
+                tbody.innerHTML = alerts.map(p => {
+                    const faltante = p.stockMinimo - p.cantidad;
+                    return `<tr>
+                        <td><strong>${p.codigo}</strong><br><small>${p.nombre}</small></td>
+                        <td><span class="text-danger">${p.cantidad}</span></td>
+                        <td>${p.stockMinimo}</td>
+                        <td><span class="stock-badge stock-critical">-${faltante}</span></td>
+                        <td><button class="btn btn-success btn-sm" onclick="showEntradaProducto('${p.id}')"><i class="bi bi-plus"></i> Reponer</button></td>
+                    </tr>`;
+                }).join('');
+            }
+        }
 
-<!-- Modal: reportar profesional -->
-<div class="modal-overlay" id="modal-report-pro">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 class="modal-title"><i class="fa fa-flag" style="color:#f87171;margin-right:8px;"></i>Reportar profesional</h3>
-      <button class="modal-close" onclick="document.getElementById('modal-report-pro').classList.remove('open')"><i class="fa fa-xmark"></i></button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="report-pro-id">
-      <input type="hidden" id="report-job-id">
-      <div class="form-group">
-        <label class="form-label">Motivo del reporte</label>
-        <select class="form-select" id="report-reason">
-          <option value="">Seleccioná un motivo</option>
-          <option value="no_se_presento">👻 No se presentó al trabajo</option>
-          <option value="mal_trato">😠 Mal trato o comportamiento inapropiado</option>
-          <option value="trabajo_incompleto">🔧 Trabajo incompleto o mal hecho</option>
-          <option value="estafa">🚨 Cobro indebido o estafa</option>
-          <option value="otro">📋 Otro</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Descripción (opcional)</label>
-        <textarea class="form-textarea" id="report-desc" placeholder="Describí lo que pasó..."></textarea>
-      </div>
-      <div style="background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:8px;padding:12px;margin-bottom:16px;font-size:0.82rem;color:var(--gray);">
-        <i class="fa fa-circle-info" style="color:var(--orange);margin-right:6px;"></i>
-        Tu reporte es anónimo y será revisado por el equipo de TECNIYA.
-      </div>
-      <button class="btn btn-danger btn-block" onclick="window.submitProReport()">
-        <i class="fa fa-flag"></i> Enviar reporte
-      </button>
-    </div>
-  </div>
-</div>
+        function showEntradaProducto(productoId) {
+            showSection('movimientos');
+            document.getElementById('movimientoTipo').value = 'entrada';
+            document.getElementById('movimientoProducto').value = productoId;
+            new bootstrap.Modal(document.getElementById('movimientoModal')).show();
+        }
 
+        function renderReportes() {
+            const desde = document.getElementById('fechaDesde')?.value ? new Date(document.getElementById('fechaDesde').value) : null;
+            const hasta = document.getElementById('fechaHasta')?.value ? new Date(document.getElementById('fechaHasta').value) : null;
+            if (hasta) hasta.setHours(23, 59, 59);
 
-<!-- Modal: editar usuario (admin) -->
-<div class="modal-overlay" id="modal-edit-user">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 class="modal-title"><i class="fa fa-user-pen" style="color:var(--accent);margin-right:8px;"></i>Editar usuario</h3>
-      <button class="modal-close" onclick="document.getElementById('modal-edit-user').classList.remove('open')"><i class="fa fa-xmark"></i></button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="edit-user-id">
+            const filtered = movimientos.filter(m => {
+                if (!m.fecha) return false;
+                const fecha = new Date(m.fecha.seconds * 1000);
+                if (desde && fecha < desde) return false;
+                if (hasta && fecha > hasta) return false;
+                return true;
+            });
 
-      <!-- Info de solo lectura -->
-      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;font-size:0.8rem;color:var(--gray);display:flex;flex-direction:column;gap:4px;">
-        <div><span style="color:var(--gray2);">ID:</span> <span id="edit-user-id-display" style="font-family:monospace;font-size:0.72rem;"></span></div>
-        <div><span style="color:var(--gray2);">Registro:</span> <span id="edit-user-created"></span></div>
-        <div style="display:flex;gap:16px;margin-top:4px;">
-          <span>❌ Cancelaciones: <strong id="edit-user-cancel-count" style="color:#f87171;">0</strong></span>
-          <span>⚠️ Advertencias: <strong id="edit-user-warning-count" style="color:#fbbf24;">0</strong></span>
-        </div>
-      </div>
+            const entradas = filtered.filter(m => m.tipo === 'entrada').reduce((sum, m) => sum + m.cantidad, 0);
+            const salidas = filtered.filter(m => m.tipo === 'salida').reduce((sum, m) => sum + m.cantidad, 0);
 
-      <!-- Nombre -->
-      <div class="form-group">
-        <label class="form-label">Nombre completo</label>
-        <input class="form-input" type="text" id="edit-user-name" placeholder="Nombre completo">
-      </div>
+            document.getElementById('reporteEntradas').textContent = entradas;
+            document.getElementById('reporteSalidas').textContent = salidas;
 
-      <!-- Rol -->
-      <div class="form-group">
-        <label class="form-label">Rol</label>
-        <select class="form-select" id="edit-user-role">
-          <option value="user">👤 Usuario</option>
-          <option value="admin">🛡️ Admin</option>
-        </select>
-      </div>
+            const tbody = document.querySelector('#reporteTable tbody');
+            tbody.innerHTML = filtered.map(m => {
+                const fecha = m.fecha ? new Date(m.fecha.seconds * 1000).toLocaleString('es-AR') : '';
+                return `<tr>
+                    <td><small>${fecha}</small></td>
+                    <td>${m.productoNombre || '?'}</td>
+                    <td><span class="movement-badge ${m.tipo === 'entrada' ? 'movement-entrada' : 'movement-salida'}">${m.tipo}</span></td>
+                    <td>${m.cantidad}</td>
+                </tr>`;
+            }).join('');
+        }
 
-      <!-- Bloqueado -->
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:16px;">
-        <div>
-          <div style="font-size:0.88rem;font-weight:600;">Cuenta bloqueada</div>
-          <div style="font-size:0.75rem;color:var(--gray);">El usuario no podrá iniciar sesión</div>
-        </div>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-          <input type="checkbox" id="edit-user-blocked" style="width:18px;height:18px;cursor:pointer;">
-        </label>
-      </div>
+        document.getElementById('filtrarReporteBtn')?.addEventListener('click', renderReportes);
 
-      <!-- Acciones rápidas -->
-      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-        <button class="btn btn-ghost btn-sm" onclick="window.adminResetCancelCount(document.getElementById('edit-user-id').value)" style="font-size:0.78rem;">
-          <i class="fa fa-rotate-left"></i> Resetear contadores
-        </button>
-        <button class="btn btn-ghost btn-sm" onclick="window.adminUnblockUntil(document.getElementById('edit-user-id').value)" style="font-size:0.78rem;color:var(--green);">
-          <i class="fa fa-unlock"></i> Desbloquear
-        </button>
-      </div>
-
-      <button class="btn btn-primary btn-block" onclick="window.adminSaveUser()">
-        <i class="fa fa-floppy-disk"></i> Guardar cambios
-      </button>
-    </div>
-  </div>
-</div>
-
-
-<!-- Modal: ver profesional (admin) -->
-<div class="modal-overlay" id="modal-view-pro">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 class="modal-title"><i class="fa fa-user-tie" style="color:var(--accent);margin-right:8px;"></i>Perfil del profesional</h3>
-      <button class="modal-close" onclick="document.getElementById('modal-view-pro').classList.remove('open')"><i class="fa fa-xmark"></i></button>
-    </div>
-    <div class="modal-body" id="view-pro-body">
-      <div style="text-align:center;padding:40px;color:var(--gray);">Cargando...</div>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: ver trabajo (admin) -->
-<div class="modal-overlay" id="modal-view-job">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 class="modal-title"><i class="fa fa-briefcase" style="color:var(--accent);margin-right:8px;"></i>Detalle del trabajo</h3>
-      <button class="modal-close" onclick="document.getElementById('modal-view-job').classList.remove('open')"><i class="fa fa-xmark"></i></button>
-    </div>
-    <div class="modal-body" id="view-job-body">
-      <div style="text-align:center;padding:40px;color:var(--gray);">Cargando...</div>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: audit log (admin) -->
-<div class="modal-overlay" id="modal-audit-log">
-  <div class="modal" style="max-width:700px;">
-    <div class="modal-header">
-      <h3 class="modal-title"><i class="fa fa-scroll" style="color:var(--accent);margin-right:8px;"></i>Log de auditoría</h3>
-      <button class="modal-close" onclick="document.getElementById('modal-audit-log').classList.remove('open')"><i class="fa fa-xmark"></i></button>
-    </div>
-    <div class="modal-body" id="audit-log-body" style="padding:0;max-height:60vh;overflow-y:auto;">
-      <div style="text-align:center;padding:40px;color:var(--gray);">Cargando...</div>
-    </div>
-  </div>
-</div>
-
-
-<!-- Modal: crear/editar publicidad (admin) -->
-<div class="modal-overlay" id="modal-ad-form">
-  <div class="modal" style="max-width:520px;">
-    <div class="modal-header">
-      <h3 class="modal-title" id="ad-form-modal-title"><i class="fa fa-bullhorn" style="color:var(--accent);margin-right:8px;"></i>Nueva publicidad</h3>
-      <button class="modal-close" onclick="document.getElementById('modal-ad-form').classList.remove('open')"><i class="fa fa-xmark"></i></button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="ad-form-id">
-
-      <div class="form-group">
-        <label class="form-label">Título del anuncio <span style="color:#f87171;">*</span></label>
-        <input class="form-input" type="text" id="ad-form-title" placeholder="Ej: Ferretería El Clavo - Todo para tu hogar">
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Descripción</label>
-        <textarea class="form-textarea" id="ad-form-desc" placeholder="Breve descripción que se mostrará en el banner..." style="min-height:70px;"></textarea>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label"><i class="fa fa-link"></i> Link de destino</label>
-        <input class="form-input" type="url" id="ad-form-link" placeholder="https://tu-sitio-web.com">
-      </div>
-
-      <div class="form-group">
-        <label class="form-label"><i class="fa fa-image"></i> Imagen del banner</label>
+        // CRUD Productos
+        const productoModal = new bootstrap.Modal(document.getElementById('productoModal'));
         
-        <!-- Input para subir archivo -->
-        <div id="ad-image-upload-area" style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all 0.2s;margin-bottom:12px;" onclick="document.getElementById('ad-form-image-file').click()">
-          <input type="file" id="ad-form-image-file" accept="image/*" style="display:none;" onchange="window.adImageFileSelected(this)">
-          <div style="color:var(--accent);font-size:24px;margin-bottom:8px;"><i class="fa fa-cloud-upload"></i></div>
-          <div style="font-size:0.85rem;color:var(--gray);">Click para subir una imagen</div>
-          <div style="font-size:0.72rem;color:var(--gray2);margin-top:4px;">PNG, JPG - Máx 5MB</div>
-        </div>
-        
-        <!-- Editor de imagen -->
-        <div id="ad-image-editor" style="display:none;margin-top:12px;">
-          <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-            <button type="button" class="btn btn-ghost btn-sm" onclick="window.adImageZoomIn()"><i class="fa fa-search-plus"></i> Zoom +</button>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="window.adImageZoomOut()"><i class="fa fa-search-minus"></i> Zoom -</button>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="window.adImageMoveUp()"><i class="fa fa-arrow-up"></i></button>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="window.adImageMoveDown()"><i class="fa fa-arrow-down"></i></button>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="window.adImageMoveLeft()"><i class="fa fa-arrow-left"></i></button>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="window.adImageMoveRight()"><i class="fa fa-arrow-right"></i></button>
-            <button type="button" class="btn btn-danger btn-sm" onclick="window.adImageClear()"><i class="fa fa-times"></i> Quitar</button>
-          </div>
-          
-          <!-- Contenedor de previsualización -->
-          <div id="ad-image-preview-container" style="width:100%;height:150px;overflow:hidden;border-radius:8px;background:var(--darker);border:1px solid var(--border);position:relative;">
-            <img id="ad-image-preview-img" src="" style="position:absolute;max-width:none;transform-origin:center;">
-          </div>
-          
-          <div style="display:flex;gap:8px;margin-top:8px;">
-            <input type="hidden" id="ad-form-image">
-            <input type="hidden" id="ad-form-image-transform" value="">
-            <span id="ad-image-status" style="font-size:0.72rem;color:var(--green);"><i class="fa fa-check"></i> Imagen lista</span>
-          </div>
-        </div>
-        
-        <!-- Preview de URL manual -->
-        <div id="ad-form-image-preview-url" style="margin-top:8px;display:none;">
-          <img id="ad-form-image-thumb" style="width:100%;max-height:80px;border-radius:8px;object-fit:cover;border:1px solid var(--border);" src="">
-          <button type="button" class="btn btn-ghost btn-sm" style="margin-top:4px;" onclick="document.getElementById('ad-form-image').value='';document.getElementById('ad-form-image-preview-url').style.display='none';"><i class="fa fa-times"></i> Quitar URL</button>
-        </div>
-        
-        <!-- Alternativa: URL manual -->
-        <div style="margin-top:8px;">
-          <button type="button" class="btn btn-ghost btn-sm" style="font-size:0.75rem;" onclick="document.getElementById('ad-image-url-input').style.display=document.getElementById('ad-image-url-input').style.display==='none'?'block':'none';">
-            <i class="fa fa-link"></i> Usar URL externa
-          </button>
-          <input class="form-input" type="url" id="ad-image-url-input" placeholder="https://ejemplo.com/imagen.jpg" style="display:none;margin-top:8px;" onchange="window.adImageUrlChanged(this.value)">
-        </div>
-      </div>
+        document.getElementById('nuevoProductoBtn')?.addEventListener('click', () => {
+            document.getElementById('productoForm').reset();
+            document.getElementById('productoId').value = '';
+            document.getElementById('productoModalTitle').textContent = 'Nuevo Producto';
+        });
 
-      <div style="background:rgba(79,70,229,0.1);border-radius:8px;padding:12px;margin-bottom:16px;">
-        <div style="font-size:0.8rem;font-weight:600;color:var(--accent);margin-bottom:8px;"><i class="fa fa-crosshairs"></i> Alcance geográfico</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-size:0.75rem;">Nivel</label>
-            <select class="form-select" id="ad-form-level">
-              <option value="nacional">🌎 Nacional</option>
-              <option value="provincial">🏛️ Provincial</option>
-              <option value="local">📍 Local</option>
-            </select>
-          </div>
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-size:0.75rem;">Provincia</label>
-            <input class="form-input" type="text" id="ad-form-province" placeholder="Ej: Buenos Aires">
-          </div>
-        </div>
-        <div class="form-group" style="margin-bottom:0;margin-top:8px;">
-          <input class="form-input" type="text" id="ad-form-city" placeholder="Ciudad específica (opcional)">
-        </div>
-      </div>
+        document.getElementById('guardarProductoBtn').addEventListener('click', async () => {
+            const form = document.getElementById('productoForm');
+            if (!form.checkValidity()) { form.reportValidity(); return; }
 
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--darker);border-radius:8px;border:1px solid var(--border);">
-        <div>
-          <div style="font-size:0.88rem;font-weight:600;">Publicidad activa</div>
-          <div style="font-size:0.75rem;color:var(--gray);">Visible para los usuarios</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span id="ad-active-label" style="font-size:0.8rem;color:var(--green);font-weight:600;">Sí</span>
-          <label class="toggle-switch" style="position:relative;display:inline-block;width:48px;height:26px;cursor:pointer;">
-            <input type="checkbox" id="ad-form-active" checked style="display:none;" onchange="document.getElementById('ad-active-label').textContent=this.checked?'Sí':'No';document.getElementById('ad-active-label').style.color=this.checked?'var(--green)':'var(--gray)';">
-            <span class="toggle-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:var(--accent);transition:0.3s;border-radius:26px;"></span>
-            <span class="toggle-knob" style="position:absolute;content:'';height:20px;width:20px;left:3px;bottom:3px;background-color:white;transition:0.3s;border-radius:50%;"></span>
-          </label>
-        </div>
-      </div>
+            const data = {
+                codigo: document.getElementById('productoCodigo').value,
+                nombre: document.getElementById('productoNombre').value,
+                cantidad: Number(document.getElementById('productoCantidad').value) || 0,
+                ubicacion: document.getElementById('productoUbicacion').value,
+                stockMinimo: Number(document.getElementById('productoStockMin').value) || 5
+            };
 
-      <button class="btn btn-primary btn-block" onclick="window.adminSaveAd()" style="margin-top:16px;">
-        <i class="fa fa-floppy-disk"></i> Guardar publicidad
-      </button>
-    </div>
-  </div>
-</div>
+            try {
+                const id = document.getElementById('productoId').value;
+                if (id) {
+                    await db.collection('productos').doc(id).update(data);
+                } else {
+                    const existing = await db.collection('productos').where('codigo', '==', data.codigo).get();
+                    if (!existing.empty) { alert('Ya existe un producto con ese código'); return; }
+                    await db.collection('productos').add(data);
+                }
+                productoModal.hide();
+            } catch (err) { alert('Error: ' + err.message); }
+        });
 
-<!-- Modal: Tour guiado inicial -->
-<div class="modal-overlay" id="modal-tour">
-  <div class="modal" style="max-width:480px;">
-    <div class="modal-header">
-      <h3 class="modal-title"><i class="fa fa-rocket" style="color:var(--accent);margin-right:8px;"></i>¡Bienvenido a TECNIYA!</h3>
-      <button class="modal-close" onclick="window.closeTour()"><i class="fa fa-xmark"></i></button>
-    </div>
-    <div class="modal-body" id="tour-content" style="text-align:center;">
-      <!-- Se填充 dinámicamente -->
-    </div>
-    <div style="padding:16px 24px 24px;display:flex;justify-content:space-between;align-items:center;">
-      <button class="btn btn-ghost btn-sm" id="btn-skip-tour" onclick="window.closeTour()">Saltar</button>
-      <div style="display:flex;gap:8px;" id="tour-dots"></div>
-      <button class="btn btn-primary" id="btn-next-tour" onclick="window.nextTourStep()">Siguiente</button>
-    </div>
-  </div>
-</div>
+        async function editarProducto(id) {
+            const doc = await db.collection('productos').doc(id).get();
+            if (!doc.exists) return;
+            const p = doc.data();
+            document.getElementById('productoId').value = id;
+            document.getElementById('productoCodigo').value = p.codigo || '';
+            document.getElementById('productoNombre').value = p.nombre || '';
+            document.getElementById('productoCantidad').value = p.cantidad || 0;
+            document.getElementById('productoUbicacion').value = p.ubicacion || '';
+            document.getElementById('productoStockMin').value = p.stockMinimo || 5;
+            document.getElementById('productoModalTitle').textContent = 'Editar Producto';
+            productoModal.show();
+        }
 
+        async function eliminarProducto(id) {
+            if (!confirm('¿Eliminar producto? Se borrarán todos sus movimientos.')) return;
+            try {
+                const movs = await db.collection('movimientos').where('productoId', '==', id).get();
+                const batch = db.batch();
+                movs.forEach(d => batch.delete(d.ref));
+                batch.delete(db.collection('productos').doc(id));
+                await batch.commit();
+            } catch (err) { alert('Error: ' + err.message); }
+        }
+
+        async function ponerStockCero(id) {
+            if (!confirm('¿Poner stock en 0? El producto aparecerá como stock crítico.')) return;
+            try {
+                await db.collection('productos').doc(id).update({ cantidad: 0 });
+            } catch (err) { alert('Error: ' + err.message); }
+        }
+
+        const historialModal = new bootstrap.Modal(document.getElementById('historialModal'));
+
+        async function verHistorial(productoId) {
+            const btn = document.querySelector(`.ver-historial[data-id="${productoId}"]`);
+            const nombre = btn?.dataset.nombre || 'Producto';
+            document.getElementById('historialModalTitle').textContent = `Historial: ${nombre}`;
+
+            const snapshot = await db.collection('movimientos')
+                .where('productoId', '==', productoId)
+                .orderBy('fecha', 'desc')
+                .get();
+
+            const tbody = document.querySelector('#historialTable tbody');
+            if (snapshot.empty) {
+                tbody.innerHTML = '';
+                document.getElementById('sinHistorial').style.display = 'block';
+            } else {
+                document.getElementById('sinHistorial').style.display = 'none';
+                tbody.innerHTML = snapshot.docs.map(doc => {
+                    const m = doc.data();
+                    const fecha = m.fecha ? new Date(m.fecha.seconds * 1000).toLocaleString('es-AR') : '';
+                    return `<tr>
+                        <td><span class="movement-badge ${m.tipo === 'entrada' ? 'movement-entrada' : 'movement-salida'}">${m.tipo}</span></td>
+                        <td>${m.cantidad}</td>
+                        <td><small>${fecha}</small></td>
+                        <td><small>${m.usuario?.split('@')[0] || ''}</small></td>
+                    </tr>`;
+                }).join('');
+            }
+            historialModal.show();
+        }
+
+        // Movimientos
+        const movimientoModal = new bootstrap.Modal(document.getElementById('movimientoModal'));
+
+        async function llenarSelectProductos() {
+            const snap = await db.collection('productos').get();
+            let opts = '<option value="">-- Seleccionar --</option>';
+            snap.forEach(d => {
+                const p = d.data();
+                opts += `<option value="${d.id}">${p.codigo} - ${p.nombre}</option>`;
+            });
+            document.getElementById('movimientoProducto').innerHTML = opts;
+        }
+
+        document.getElementById('guardarMovimientoBtn').addEventListener('click', async () => {
+            const form = document.getElementById('movimientoForm');
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+
+            const productoId = document.getElementById('movimientoProducto').value;
+            const tipo = document.getElementById('movimientoTipo').value;
+            const cantidad = Number(document.getElementById('movimientoCantidad').value);
+
+            const prodRef = db.collection('productos').doc(productoId);
+            const prodDoc = await prodRef.get();
+            if (!prodDoc.exists) { alert('Producto no encontrado'); return; }
+            const prod = prodDoc.data();
+
+            if (tipo === 'salida' && prod.cantidad < cantidad) {
+                alert('Stock insuficiente'); return;
+            }
+
+            const nuevaCantidad = tipo === 'entrada' ? prod.cantidad + cantidad : prod.cantidad - cantidad;
+            const batch = db.batch();
+            batch.update(prodRef, { cantidad: nuevaCantidad });
+            batch.set(db.collection('movimientos').doc(), {
+                productoId,
+                productoNombre: prod.nombre,
+                tipo,
+                cantidad,
+                fecha: firebase.firestore.FieldValue.serverTimestamp(),
+                usuario: currentUser.email
+            });
+
+            try {
+                await batch.commit();
+                movimientoModal.hide();
+                document.getElementById('movimientoForm').reset();
+            } catch (err) { alert('Error: ' + err.message); }
+        });
+
+        document.getElementById('movimientoModal').addEventListener('shown.bs.modal', llenarSelectProductos);
+        document.getElementById('productoModal').addEventListener('hidden.bs.modal', () => document.getElementById('productoForm').reset());
+    </script>
 </body>
 </html>
-
-<!-- Modal Calificar Usuario -->
-<div class="modal-overlay" id="modal-rate-user">
-  <div class="modal-content" style="max-width:520px;">
-    <div class="modal-header">
-      <h3 style="margin:0;display:flex;align-items:center;gap:8px;">
-        <i class="fa fa-star" style="color:var(--accent);"></i>
-        Calificar Cliente
-      </h3>
-      <button class="modal-close" onclick="closeModal('modal-rate-user')">
-        <i class="fa fa-times"></i>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div style="text-align:center;margin-bottom:24px;padding:16px;background:var(--glass);border-radius:var(--radius-sm);border:1px solid var(--border);">
-        <div style="font-size:0.85rem;color:var(--gray);margin-bottom:4px;">Calificando a</div>
-        <div style="font-weight:700;font-size:1.1rem;color:var(--light);" id="rate-user-name">Usuario</div>
-      </div>
-      <div style="margin-bottom:24px;">
-        <label style="display:block;font-weight:600;margin-bottom:12px;font-size:0.95rem;">
-          <i class="fa fa-star" style="color:var(--accent);margin-right:6px;"></i>
-          Calificación General
-        </label>
-        <div class="star-rating" id="user-rating-overall" style="justify-content:center;margin-bottom:8px;">
-          <i class="fa fa-star star-rate"></i>
-          <i class="fa fa-star star-rate"></i>
-          <i class="fa fa-star star-rate"></i>
-          <i class="fa fa-star star-rate"></i>
-          <i class="fa fa-star star-rate"></i>
-        </div>
-        <input type="hidden" id="user-rating-value" value="0">
-      </div>
-      <div style="display:grid;gap:16px;margin-bottom:20px;">
-        <div class="rating-category">
-          <label style="display:block;font-weight:600;margin-bottom:8px;font-size:0.85rem;color:var(--light);">
-            <i class="fa fa-handshake" style="color:var(--green);margin-right:6px;"></i>
-            Cumplimiento
-          </label>
-          <div style="font-size:0.7rem;color:var(--gray);margin-bottom:8px;">Paga a tiempo, respeta acuerdos</div>
-          <div class="star-rating" id="user-rating-cumplimiento">
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-          </div>
-          <input type="hidden" id="user-cumplimiento-value" value="0">
-        </div>
-        <div class="rating-category">
-          <label style="display:block;font-weight:600;margin-bottom:8px;font-size:0.85rem;color:var(--light);">
-            <i class="fa fa-heart" style="color:var(--orange);margin-right:6px;"></i>
-            Respeto
-          </label>
-          <div style="font-size:0.7rem;color:var(--gray);margin-bottom:8px;">Trato cordial y respetuoso</div>
-          <div class="star-rating" id="user-rating-respeto">
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-          </div>
-          <input type="hidden" id="user-respeto-value" value="0">
-        </div>
-        <div class="rating-category">
-          <label style="display:block;font-weight:600;margin-bottom:8px;font-size:0.85rem;color:var(--light);">
-            <i class="fa fa-comments" style="color:var(--primary);margin-right:6px;"></i>
-            Claridad
-          </label>
-          <div style="font-size:0.7rem;color:var(--gray);margin-bottom:8px;">Explicó bien el problema</div>
-          <div class="star-rating" id="user-rating-claridad">
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-          </div>
-          <input type="hidden" id="user-claridad-value" value="0">
-        </div>
-        <div class="rating-category">
-          <label style="display:block;font-weight:600;margin-bottom:8px;font-size:0.85rem;color:var(--light);">
-            <i class="fa fa-message" style="color:var(--accent);margin-right:6px;"></i>
-            Comunicación
-          </label>
-          <div style="font-size:0.7rem;color:var(--gray);margin-bottom:8px;">Responde rápido, disponible</div>
-          <div class="star-rating" id="user-rating-comunicacion">
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-          </div>
-          <input type="hidden" id="user-comunicacion-value" value="0">
-        </div>
-      </div>
-      <div style="margin-bottom:20px;">
-        <label style="display:block;font-weight:600;margin-bottom:8px;font-size:0.85rem;">
-          <i class="fa fa-comment" style="color:var(--gray);margin-right:6px;"></i>
-          Comentario (opcional)
-        </label>
-        <textarea id="user-rating-comment" placeholder="Comparte tu experiencia con este cliente..." style="width:100%;min-height:100px;padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--light);font-size:0.85rem;resize:vertical;"></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modal-rate-user')">Cancelar</button>
-      <button class="btn btn-primary" id="btn-submit-user-rating"><i class="fa fa-paper-plane"></i> Enviar Calificación</button>
-    </div>
-  </div>
-</div>
-
-<style>
-.star-rating {display:flex;gap:8px;font-size:1.8rem;}
-.star-rate {color:rgba(255,255,255,0.2);cursor:pointer;transition:all 0.2s;}
-.star-rate:hover,.star-rate.active {color:var(--accent);transform:scale(1.1);}
-.rating-category {padding:14px;background:var(--glass);border-radius:var(--radius-sm);border:1px solid var(--border);}
-.rating-category .star-rating {font-size:1.4rem;}
-</style>
-
-
-<!-- Modal de Alerta Urgente (tipo Uber) -->
-<div id="urgent-alert-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.95);backdrop-filter:blur(8px);">
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:420px;background:linear-gradient(135deg, var(--darker), #1a1a2e);border-radius:20px;padding:0;box-shadow:0 20px 60px rgba(0,0,0,0.5);border:2px solid var(--orange);overflow:hidden;">
-    
-    <!-- Animated header -->
-    <div style="background:linear-gradient(135deg, var(--orange), #ef4444);padding:24px;position:relative;overflow:hidden;">
-      <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:url('data:image/svg+xml,<svg width=\"100\" height=\"100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"40\" fill=\"white\" opacity=\"0.1\"/></svg>');animation:pulse 2s infinite;"></div>
-      <div style="text-align:center;position:relative;z-index:1;">
-        <div style="font-size:3.5rem;margin-bottom:8px;animation:bounce 1s infinite;">🚨</div>
-        <h2 style="margin:0;font-size:1.4rem;font-weight:900;color:white;text-transform:uppercase;letter-spacing:2px;">Solicitud Urgente</h2>
-      </div>
-    </div>
-
-    <!-- Content -->
-    <div style="padding:24px;">
-      <div id="urgent-alert-content"></div>
-      
-      <!-- Timer circular -->
-      <div style="text-align:center;margin:24px 0;">
-        <div style="position:relative;width:120px;height:120px;margin:0 auto;">
-          <svg width="120" height="120" style="transform:rotate(-90deg);">
-            <circle cx="60" cy="60" r="54" stroke="rgba(255,255,255,0.1)" stroke-width="6" fill="none"/>
-            <circle id="timer-circle" cx="60" cy="60" r="54" stroke="var(--orange)" stroke-width="6" fill="none" stroke-dasharray="339.292" stroke-dashoffset="0" style="transition:stroke-dashoffset 1s linear;"/>
-          </svg>
-          <div id="timer-text" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:2rem;font-weight:900;color:var(--orange);">30</div>
-        </div>
-        <div style="font-size:0.85rem;color:var(--gray);margin-top:8px;">segundos para responder</div>
-      </div>
-
-      <!-- Action buttons -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <button id="reject-urgent-alert" style="padding:16px;border:2px solid var(--border);background:transparent;color:var(--light);border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;transition:all 0.2s;">
-          <i class="fa fa-times"></i> Rechazar
-        </button>
-        <button id="accept-urgent-alert" style="padding:16px;border:none;background:linear-gradient(135deg, var(--green), #059669);color:white;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 15px rgba(16,185,129,0.3);">
-          <i class="fa fa-check"></i> Aceptar
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Sound effect -->
-  <audio id="urgent-alert-sound" preload="auto">
-    <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGWi77eWSUwwOU6zn77RgGwU7k9nyz3wvBSh+zO/ekkILElyx6OyrWBUIR6Hh8r9uIgUsgs/y2ok3CBlouu7mk1MMDlSs5++1YRwFPZTa8tB+MAUpf87w4JVEDBJcr+fxrVsYCEmj4vPBbyMFLYPQ8tuKNwgZabzw5pVVDA5VrOjvtmEdBT+V2/LRgDEFKoHO8OCXRQwSXbDn8bBdGQhKpOLzwnAnBS2D0fLbjDgIGGm88OeXVgwOVqzo77dhHQU/ltzy0oIyBSuCz/DiWEYMEl2x6PGxXhoIS6Xi88NxKAUuhNHy34w4CBhqvfDnmVcMDVew6fC4Yh4FQJjd8tOENAUrhM/w41lHDBJauvHztV8bB0ul4vTDcygFLoTR8t+NOQcYar3w6ZlYDA1XsOnwumMfBUCZ3vLUhTUFK4TP8OJaSAwSWrvx87ZgGwdMpuP0xHQpBS6E0fPgjjgHF2q+8OqbWQ0MV7Dp8LtlHwVAmt/y1YY1BSuEz/DjW0kMElq78fS3YRsHTKfk9MV1KQUvhNHz4Y44BxdrvvDqnFoNDFex6fC8Zh8FQJvg8taGNgUshM/w5FxJDBFavPH0uGIfB0yo5fTGdioFLoTR8+KPOQcXa77x65xbDQxXserwvWYfBUCc4fLXhzYFLITP8OVdSgwRWr3y9blkIAdMqOX0x3cqBS6E0fPjkDoHF2u+8eudWw0MWLLr8L5oHwVBnOHy14g3BSyEz/DmXUoMEFq98vW6ZCAHTKjl9Mh4KwUvhNL05JA6BxdsvvHrnlwNDFiy6/C/aCAFQZzh89eIOQUshdDx511LDA9avvL2u2UhCE2p5vXJeSsFLoPQ8+WROgcXbL/x655cDQxZs+vwv2kgBUKd4vPYijgFLIXQ8eheSgsQW7/z97tmIQhNqub1ynorBS6D0PPlkjoHGG2/8eufXQ0MWbPr8L9qIQVCneLz2Ik5BSyF0fHpXksLEFu/8/e8ZyEITqrm9ct7LAUug9Dz5pM7Bxhtwfbqn14NClmz6/HAaiEFQ53i89mKOgUthdHx6l9LCw9bwPP3vWciB06q5vbMfCwFLoPR8+aUOwcZbcH26qFeDQpZsuzwwWsiB0Oe4/TZizoFLYXS8etgTAsPW8D0+L5oIgdOq+b2zXwsBi6D0vTnlTwHGW3B9+qiXg0KWbLs8MJsIgdDoOP02ow7BS2F0vHrYkwLD1zA9Pi/aSIHTqzm9s59LAYug9L056Y8BxptwvfqpF8NClqy7PDDbCIHQ6Hk9NuNPAUths/y7GNNCg5cwfP5v2ojB1Ct5/bOfSwGLoPT9OioOgcZbsL36aJgDQlasuzxxG0iB0Oh5PTbjjwGLYfQ8+1lTQoOXMH0+cBqJAdQref2z34sBi+D0/TpqTsHGW7D9+mjYA0JWrPs8cVuIgdDoeT03I89Bi2H0PPuZk0KDl3C9PnBayQHUK7n9tB+LAYug9T06qo7BxlvxPfqpGENClqz7PHFbyMHRKLl9N6RPQYuh9Hz72ZNCw5dw/T5wmslB1Cu5/bRfywGLoPU9OyrPAcZb8T36qVhDQlbtOzxxnAjB0Si5vTgkT0GLofR8/BnTQsOXcP1+sNrJQdQr+f203gsBi6E1PTtrDwHGW/F9+untWINCluz7PLIcCQHRKPm9OCRPgYuh9Hz8GhOCg5exPX7xGwmB1Cv6PfUeS0GLoPU9e2tPQcZcMX36q1iDQpcte7yyXEkB0Sj5fThkj4GLojS9PFpTwoOXsX1+8VsJwdSsOj31Xkuhy+D1fXurj0HGnDF+OqvYw0KXLX/8spyJAdEo+X04ZI+Bi6I0vTyak8LDl7F9fvGbSgHUrDo99Z6LkYvhNX17q8+BxpwxvjqsGMNClyx7vLLcyQHRKPl9OKSPwYuidL08mtQCw5fx/b8x24oB1Kx6PfXejBGLIPV9O+wPQcacMb46rFjDgpcse7yzHQkB0Sk5fTjkj8GLonT9PJsUAsOX8f2/MhvKAdSsej313owRi+E1vPwsTwHGXDG+OuxZA0KXLL+8sx1JQdFpOb05JI/By6J0/TzbVALD1/H9vzJbykHU7Lp99h7MUYvhNb08LI8Bxpxxvjrs2QNClyz/vTNdiUHRaTm9OWSPwcuidP082xRCw9gyPf8ynApB1Oy6ffYezFGMITV9PCzPQcaccf46rNkDQpcs/70znckB0ak5/TlkjQHLorU9fNsUQsPYcj3/ctyKAdTsuv32X0yRzCE1vXxtD4HGnHH+OuzZA4KXbT+9c93JQdGpef05JM9By6K1PXzbVIKD2HJ9/3MdCoHUrHq99l9MkcwhNb08bQ+BxpyyPjrsmQOCl20/vbPdyUHRaXn9OWTPQcui9T182xSCw9hyff9zHUrB1Ox6vfZfTJHMITW9fG0PgcacsjpXzZSDlkAAA==" type="audio/wav">
-  </audio>
-</div>
-
-<style>
-@keyframes pulse {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.05); }
-}
-
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-
-#reject-urgent-alert:hover {
-  background: rgba(255,255,255,0.05);
-  transform: scale(1.02);
-}
-
-#accept-urgent-alert:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(16,185,129,0.4);
-}
-</style>
