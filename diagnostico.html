@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Diagnóstico Sistema Urgencias</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a2e; color: #fff; }
+    .section { margin: 20px 0; padding: 15px; background: #16213e; border-radius: 8px; }
+    .good { color: #10b981; }
+    .bad { color: #ef4444; }
+    .warning { color: #f59e0b; }
+    button { padding: 10px 20px; margin: 5px; cursor: pointer; background: #4f46e5; color: white; border: none; border-radius: 4px; }
+    button:hover { background: #6366f1; }
+    pre { background: #0f172a; padding: 10px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <h1>🔍 Diagnóstico Sistema de Urgencias</h1>
+  
+  <div class="section">
+    <h2>1. Verificar Migración SQL</h2>
+    <button onclick="checkMigration()">Verificar Tablas y Funciones</button>
+    <pre id="migration-result">Click en el botón para verificar...</pre>
+  </div>
+
+  <div class="section">
+    <h2>2. Verificar Profesional Conectado</h2>
+    <button onclick="checkProfessional()">Ver Estado del Profesional</button>
+    <pre id="professional-result">Click en el botón para verificar...</pre>
+  </div>
+
+  <div class="section">
+    <h2>3. Simular Búsqueda de Profesionales</h2>
+    <input type="number" id="test-lat" placeholder="Latitud" value="-32.9442" style="padding:8px;margin:5px;">
+    <input type="number" id="test-lng" placeholder="Longitud" value="-60.6505" style="padding:8px;margin:5px;">
+    <input type="text" id="test-specialty" placeholder="Especialidad (vacío = todas)" value="" style="padding:8px;margin:5px;">
+    <button onclick="testSearch()">Buscar Profesionales</button>
+    <pre id="search-result">Click en el botón para buscar...</pre>
+  </div>
+
+  <div class="section">
+    <h2>4. Conectar Profesional de Prueba</h2>
+    <button onclick="connectTestPro()">Conectar con mi ubicación actual</button>
+    <pre id="connect-result">Click en el botón para conectar...</pre>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://dkswhmujymvsbosghrsd.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrc3dobXVqeW12c2Jvc2docnNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYyNzI1NzMsImV4cCI6MjA1MTg0ODU3M30.gN2SxJJXe5rLvwZD_fCcJmEhtKrXuF13a0BAgS8v_E4';
+    
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    async function checkMigration() {
+      const result = document.getElementById('migration-result');
+      result.textContent = 'Verificando...\n\n';
+
+      try {
+        // Check if columns exist
+        const { data: professionals, error: e1 } = await sb
+          .from('professionals')
+          .select('latitude, longitude, is_online')
+          .limit(1);
+
+        if (e1) {
+          result.textContent += `❌ Error en tabla professionals: ${e1.message}\n`;
+        } else {
+          result.textContent += `✅ Columnas latitude, longitude, is_online existen\n`;
+        }
+
+        const { data: urgentReqs, error: e2 } = await sb
+          .from('urgent_requests')
+          .select('address, notified_pros')
+          .limit(1);
+
+        if (e2) {
+          result.textContent += `❌ Error en tabla urgent_requests: ${e2.message}\n`;
+        } else {
+          result.textContent += `✅ Columnas address, notified_pros existen\n`;
+        }
+
+        // Check RPC function
+        const { data: rpcTest, error: e3 } = await sb.rpc('get_nearby_online_professionals', {
+          user_lat: -32.9442,
+          user_lng: -60.6505,
+          search_specialty: null,
+          max_radius_km: 50
+        });
+
+        if (e3) {
+          result.textContent += `\n❌ Función RPC no existe: ${e3.message}\n`;
+          result.textContent += `\n⚠️  SOLUCIÓN: Ejecutar migration_geolocation.sql en Supabase SQL Editor\n`;
+        } else {
+          result.textContent += `\n✅ Función RPC get_nearby_online_professionals existe\n`;
+          result.textContent += `   Profesionales encontrados en prueba: ${rpcTest?.length || 0}\n`;
+        }
+
+      } catch (error) {
+        result.textContent += `\n❌ Error: ${error.message}\n`;
+      }
+    }
+
+    async function checkProfessional() {
+      const result = document.getElementById('professional-result');
+      result.textContent = 'Verificando...\n\n';
+
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) {
+        result.textContent = '❌ No hay usuario logueado\n\nSolución: Inicia sesión en la aplicación principal';
+        return;
+      }
+
+      result.textContent += `Usuario ID: ${user.id}\n\n`;
+
+      const { data: pro, error } = await sb
+        .from('professionals')
+        .select('*, profiles!user_id(full_name)')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        result.textContent += `❌ Error: ${error.message}\n`;
+        return;
+      }
+
+      if (!pro) {
+        result.textContent += '❌ Este usuario no es profesional\n';
+        return;
+      }
+
+      result.textContent += `✅ Nombre: ${pro.profiles?.full_name || 'N/A'}\n`;
+      result.textContent += `   Especialidad: ${pro.specialty}\n`;
+      result.textContent += `   Conectado: ${pro.is_online ? '✅ SÍ' : '❌ NO'}\n`;
+      result.textContent += `   Latitud: ${pro.latitude || '❌ NO DEFINIDA'}\n`;
+      result.textContent += `   Longitud: ${pro.longitude || '❌ NO DEFINIDA'}\n`;
+      result.textContent += `\n`;
+
+      if (!pro.is_online) {
+        result.textContent += '⚠️  PROBLEMA: is_online = false\n';
+        result.textContent += '   SOLUCIÓN: Activar toggle "Conectado" en dashboard\n\n';
+      }
+      if (!pro.latitude || !pro.longitude) {
+        result.textContent += '⚠️  PROBLEMA: No tiene ubicación guardada\n';
+        result.textContent += '   SOLUCIÓN: Usar botón "Conectar con mi ubicación actual" abajo\n';
+      }
+    }
+
+    async function testSearch() {
+      const result = document.getElementById('search-result');
+      const lat = parseFloat(document.getElementById('test-lat').value);
+      const lng = parseFloat(document.getElementById('test-lng').value);
+      const specialty = document.getElementById('test-specialty').value.trim() || null;
+
+      result.textContent = 'Buscando...\n\n';
+      result.textContent += `Parámetros:\n`;
+      result.textContent += `  Latitud: ${lat}\n`;
+      result.textContent += `  Longitud: ${lng}\n`;
+      result.textContent += `  Especialidad: ${specialty || 'TODAS'}\n`;
+      result.textContent += `  Radio: 50 km\n\n`;
+
+      try {
+        const { data: pros, error } = await sb.rpc('get_nearby_online_professionals', {
+          user_lat: lat,
+          user_lng: lng,
+          search_specialty: specialty,
+          max_radius_km: 50
+        });
+
+        if (error) {
+          result.textContent += `❌ Error: ${error.message}\n`;
+          return;
+        }
+
+        result.textContent += `✅ Búsqueda completada\n`;
+        result.textContent += `   Profesionales encontrados: ${pros?.length || 0}\n\n`;
+        
+        if (pros && pros.length > 0) {
+          pros.forEach((p, i) => {
+            result.textContent += `${i + 1}. ${p.name}\n`;
+            result.textContent += `   Especialidad: ${p.specialty}\n`;
+            result.textContent += `   Distancia: ${p.distance_km} km\n`;
+            result.textContent += `   Online: ${p.is_online}\n`;
+            result.textContent += `   Ciudad: ${p.city || 'N/A'}\n`;
+            result.textContent += `\n`;
+          });
+        } else {
+          result.textContent += '❌ No se encontraron profesionales\n\n';
+          result.textContent += 'Posibles causas:\n';
+          result.textContent += '- No hay profesionales con is_online = true\n';
+          result.textContent += '- No hay profesionales con lat/lng definidos\n';
+          result.textContent += '- Todos están fuera del radio de 50km\n';
+          result.textContent += '- La especialidad no coincide\n';
+        }
+
+      } catch (error) {
+        result.textContent += `❌ Error: ${error.message}\n`;
+      }
+    }
+
+    async function connectTestPro() {
+      const result = document.getElementById('connect-result');
+      result.textContent = 'Verificando usuario...\n';
+
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) {
+        result.textContent = '❌ No hay usuario logueado\n\nInicia sesión en la aplicación principal primero';
+        return;
+      }
+
+      result.textContent += `✅ Usuario: ${user.id}\n\n`;
+      result.textContent += 'Solicitando permisos de ubicación...\n';
+
+      if (!navigator.geolocation) {
+        result.textContent += '❌ Tu navegador no soporta geolocalización';
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+
+        result.textContent += `✅ Ubicación detectada:\n`;
+        result.textContent += `   Latitud: ${lat}\n`;
+        result.textContent += `   Longitud: ${lng}\n\n`;
+        result.textContent += 'Guardando en base de datos...\n';
+
+        const { data, error } = await sb
+          .from('professionals')
+          .update({
+            latitude: lat,
+            longitude: lng,
+            is_online: true
+          })
+          .eq('user_id', user.id)
+          .select();
+
+        if (error) {
+          result.textContent += `\n❌ Error al guardar: ${error.message}\n`;
+        } else if (!data || data.length === 0) {
+          result.textContent += `\n❌ No se encontró registro de profesional para este usuario\n`;
+          result.textContent += `   Este usuario no es profesional o no tiene perfil creado\n`;
+        } else {
+          result.textContent += `\n✅ ¡CONECTADO EXITOSAMENTE!\n\n`;
+          result.textContent += `Datos guardados:\n`;
+          result.textContent += `  Latitud: ${lat}\n`;
+          result.textContent += `  Longitud: ${lng}\n`;
+          result.textContent += `  is_online: true\n\n`;
+          result.textContent += `Ahora probá enviar una urgencia desde otra cuenta\n`;
+        }
+      }, (error) => {
+        result.textContent += `\n❌ Error obteniendo ubicación: ${error.message}\n\n`;
+        result.textContent += 'Posibles causas:\n';
+        result.textContent += '- Denegaste los permisos de ubicación\n';
+        result.textContent += '- Tu navegador bloqueó la ubicación\n';
+        result.textContent += '- Estás en HTTP (necesita HTTPS)\n';
+      }, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      });
+    }
+
+    // Auto-check on load
+    window.addEventListener('load', () => {
+      checkMigration();
+    });
+  </script>
+</body>
+</html>

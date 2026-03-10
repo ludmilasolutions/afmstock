@@ -1,31 +1,29 @@
 {
-  "name": "StockAFM - Ferretería",
-  "short_name": "StockAFM",
-  "description": "Control de inventario para ferretería - Creado por AFMSolutions",
-  "start_url": ".",
+  "name": "TECNIYA",
+  "short_name": "TECNIYA",
+  "description": "Encontrá profesionales técnicos cerca tuyo",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#1a1a2e",
-  "theme_color": "#4361ee",
+  "background_color": "#020617",
+  "theme_color": "#020617",
   "orientation": "portrait-primary",
+  "scope": "/",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%234361ee' width='100' height='100' rx='20'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='white'>📦</text></svg>",
+      "src": "assets/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%234361ee' width='100' height='100' rx='20'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='white'>📦</text></svg>",
+      "src": "assets/icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],
-  "categories": ["business", "productivity"],
-  "lang": "es",
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "es-AR",
   "dir": "ltr",
-  "developer": {
-    "name": "AFMSolutions",
-    "url": "https://afmsolutions.com.ar"
-  }
+  "prefer_related_applications": false
 }

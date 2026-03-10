@@ -1,0 +1,7 @@
+# Excluir archivos estáticos del SPA redirect
+/js/*     /js/:splat  200
+/css/*    /css/:splat 200
+/assets/* /assets/:splat 200
+
+# SPA fallback — solo para rutas sin extensión
+/*    /index.html   200

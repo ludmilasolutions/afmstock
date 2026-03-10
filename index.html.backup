@@ -332,19 +332,7 @@
         <div class="dash-greeting">Panel Profesional</div>
         <p style="color:var(--gray);font-size:0.9rem;margin-top:4px;" id="pro-dash-specialty">Tu especialidad</p>
       </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--glass);border-radius:var(--radius);border:1px solid var(--border);">
-          <div style="display:flex;align-items:center;gap:6px;">
-            <i class="fa fa-circle" id="status-dot" style="font-size:0.6rem;color:var(--gray);"></i>
-            <span id="status-text" style="font-size:0.85rem;color:var(--gray);">Desconectado</span>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="toggle-online-status" style="display:none;">
-            <span class="toggle-slider">
-              <span class="toggle-knob"></span>
-            </span>
-          </label>
-        </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn btn-ghost btn-sm" id="btn-edit-pro-profile"><i class="fa fa-pencil"></i>Editar Perfil</button>
         <button class="btn btn-orange btn-sm" id="btn-featured-pro"><i class="fa fa-crown"></i>Ser Destacado</button>
       </div>
@@ -364,17 +352,6 @@
       <button class="tab" data-tab="tab-pro-config">Configuración</button>
     </div>
     <div class="tab-panel active" id="tab-pro-solicitudes">
-      <div id="urgent-requests-section" style="margin-bottom:24px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <i class="fa fa-bolt" style="color:var(--orange);font-size:1.2rem;"></i>
-            <h3 style="margin:0;font-size:1rem;">Solicitudes Urgentes</h3>
-          </div>
-          <span id="urgent-count-badge" style="background:var(--orange);color:white;padding:2px 8px;border-radius:20px;font-size:0.75rem;font-weight:700;display:none;">0</span>
-        </div>
-        <div id="urgent-requests-list"></div>
-      </div>
-      <h3 style="margin:0 0 12px 0;font-size:1rem;">Solicitudes Normales</h3>
       <div class="jobs-list" id="pro-jobs-new">
         <div class="empty-state"><i class="fa fa-inbox"></i><p>No tenés solicitudes nuevas.</p></div>
       </div>
@@ -433,13 +410,9 @@
         </div>
         <div class="form-group">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.9rem;">
-            <input type="checkbox" id="urgencias" style="accent-color:var(--green);width:16px;height:16px;">
-            <i class="fa fa-circle" style="font-size:0.6rem;color:var(--green);"></i>
-            Conectado para urgencias (recibir solicitudes urgentes)
+            <input type="checkbox" id="urgencias" style="accent-color:var(--orange);width:16px;height:16px;">
+            Acepto trabajos urgentes
           </label>
-          <div style="font-size:0.75rem;color:var(--gray);margin-top:4px;margin-left:24px;">
-            Cuando estés conectado, aparecerás como "Disponible ahora" y recibirás notificaciones de trabajos urgentes
-          </div>
         </div>
         <button class="btn btn-primary btn-sm" id="btn-save-availability">Guardar configuración</button>
       </div>
@@ -1116,26 +1089,14 @@
         <textarea class="form-textarea" id="urgent-desc" placeholder="Describí brevemente qué pasó..." style="min-height:80px;"></textarea>
       </div>
       <div class="form-group">
-        <label class="form-label">Dirección</label>
-        <input type="text" class="form-input" id="urgent-address" placeholder="Calle, número, ciudad">
-      </div>
-      <div class="form-group">
         <label class="form-label">Radio de búsqueda</label>
         <select class="form-select" id="urgent-radius">
           <option value="5">5 km</option>
           <option value="10" selected>10 km</option>
           <option value="20">20 km</option>
-          <option value="50">50 km</option>
         </select>
       </div>
-      <div id="urgency-map-status" style="padding:12px;background:rgba(6,182,212,0.1);border-radius:8px;margin-bottom:16px;font-size:0.85rem;display:flex;align-items:center;gap:8px;">
-        <i class="fa fa-location-dot" style="color:var(--accent);"></i>
-        <span id="location-status-text">Detectando tu ubicación...</span>
-      </div>
-      <div id="nearby-pros-preview" style="display:none;margin-bottom:16px;">
-        <div style="font-size:0.85rem;color:var(--gray);margin-bottom:8px;">Profesionales disponibles cerca:</div>
-        <div id="nearby-pros-count" style="font-size:1.2rem;font-weight:700;color:var(--green);"></div>
-      </div>
+      <div class="urgency-map"><i class="fa fa-location-dot" style="margin-right:8px;color:var(--orange);"></i>Detectando tu ubicación...</div>
       <button class="btn btn-orange btn-block btn-lg" id="btn-send-urgent"><i class="fa fa-bolt"></i>Enviar solicitud urgente</button>
     </div>
   </div>
@@ -1898,189 +1859,3 @@
 
 </body>
 </html>
-
-<!-- Modal Calificar Usuario -->
-<div class="modal-overlay" id="modal-rate-user">
-  <div class="modal-content" style="max-width:520px;">
-    <div class="modal-header">
-      <h3 style="margin:0;display:flex;align-items:center;gap:8px;">
-        <i class="fa fa-star" style="color:var(--accent);"></i>
-        Calificar Cliente
-      </h3>
-      <button class="modal-close" onclick="closeModal('modal-rate-user')">
-        <i class="fa fa-times"></i>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div style="text-align:center;margin-bottom:24px;padding:16px;background:var(--glass);border-radius:var(--radius-sm);border:1px solid var(--border);">
-        <div style="font-size:0.85rem;color:var(--gray);margin-bottom:4px;">Calificando a</div>
-        <div style="font-weight:700;font-size:1.1rem;color:var(--light);" id="rate-user-name">Usuario</div>
-      </div>
-      <div style="margin-bottom:24px;">
-        <label style="display:block;font-weight:600;margin-bottom:12px;font-size:0.95rem;">
-          <i class="fa fa-star" style="color:var(--accent);margin-right:6px;"></i>
-          Calificación General
-        </label>
-        <div class="star-rating" id="user-rating-overall" style="justify-content:center;margin-bottom:8px;">
-          <i class="fa fa-star star-rate"></i>
-          <i class="fa fa-star star-rate"></i>
-          <i class="fa fa-star star-rate"></i>
-          <i class="fa fa-star star-rate"></i>
-          <i class="fa fa-star star-rate"></i>
-        </div>
-        <input type="hidden" id="user-rating-value" value="0">
-      </div>
-      <div style="display:grid;gap:16px;margin-bottom:20px;">
-        <div class="rating-category">
-          <label style="display:block;font-weight:600;margin-bottom:8px;font-size:0.85rem;color:var(--light);">
-            <i class="fa fa-handshake" style="color:var(--green);margin-right:6px;"></i>
-            Cumplimiento
-          </label>
-          <div style="font-size:0.7rem;color:var(--gray);margin-bottom:8px;">Paga a tiempo, respeta acuerdos</div>
-          <div class="star-rating" id="user-rating-cumplimiento">
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-          </div>
-          <input type="hidden" id="user-cumplimiento-value" value="0">
-        </div>
-        <div class="rating-category">
-          <label style="display:block;font-weight:600;margin-bottom:8px;font-size:0.85rem;color:var(--light);">
-            <i class="fa fa-heart" style="color:var(--orange);margin-right:6px;"></i>
-            Respeto
-          </label>
-          <div style="font-size:0.7rem;color:var(--gray);margin-bottom:8px;">Trato cordial y respetuoso</div>
-          <div class="star-rating" id="user-rating-respeto">
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-          </div>
-          <input type="hidden" id="user-respeto-value" value="0">
-        </div>
-        <div class="rating-category">
-          <label style="display:block;font-weight:600;margin-bottom:8px;font-size:0.85rem;color:var(--light);">
-            <i class="fa fa-comments" style="color:var(--primary);margin-right:6px;"></i>
-            Claridad
-          </label>
-          <div style="font-size:0.7rem;color:var(--gray);margin-bottom:8px;">Explicó bien el problema</div>
-          <div class="star-rating" id="user-rating-claridad">
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-          </div>
-          <input type="hidden" id="user-claridad-value" value="0">
-        </div>
-        <div class="rating-category">
-          <label style="display:block;font-weight:600;margin-bottom:8px;font-size:0.85rem;color:var(--light);">
-            <i class="fa fa-message" style="color:var(--accent);margin-right:6px;"></i>
-            Comunicación
-          </label>
-          <div style="font-size:0.7rem;color:var(--gray);margin-bottom:8px;">Responde rápido, disponible</div>
-          <div class="star-rating" id="user-rating-comunicacion">
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-            <i class="fa fa-star star-rate"></i>
-          </div>
-          <input type="hidden" id="user-comunicacion-value" value="0">
-        </div>
-      </div>
-      <div style="margin-bottom:20px;">
-        <label style="display:block;font-weight:600;margin-bottom:8px;font-size:0.85rem;">
-          <i class="fa fa-comment" style="color:var(--gray);margin-right:6px;"></i>
-          Comentario (opcional)
-        </label>
-        <textarea id="user-rating-comment" placeholder="Comparte tu experiencia con este cliente..." style="width:100%;min-height:100px;padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--light);font-size:0.85rem;resize:vertical;"></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modal-rate-user')">Cancelar</button>
-      <button class="btn btn-primary" id="btn-submit-user-rating"><i class="fa fa-paper-plane"></i> Enviar Calificación</button>
-    </div>
-  </div>
-</div>
-
-<style>
-.star-rating {display:flex;gap:8px;font-size:1.8rem;}
-.star-rate {color:rgba(255,255,255,0.2);cursor:pointer;transition:all 0.2s;}
-.star-rate:hover,.star-rate.active {color:var(--accent);transform:scale(1.1);}
-.rating-category {padding:14px;background:var(--glass);border-radius:var(--radius-sm);border:1px solid var(--border);}
-.rating-category .star-rating {font-size:1.4rem;}
-</style>
-
-
-<!-- Modal de Alerta Urgente (tipo Uber) -->
-<div id="urgent-alert-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.95);backdrop-filter:blur(8px);">
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:420px;background:linear-gradient(135deg, var(--darker), #1a1a2e);border-radius:20px;padding:0;box-shadow:0 20px 60px rgba(0,0,0,0.5);border:2px solid var(--orange);overflow:hidden;">
-    
-    <!-- Animated header -->
-    <div style="background:linear-gradient(135deg, var(--orange), #ef4444);padding:24px;position:relative;overflow:hidden;">
-      <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:url('data:image/svg+xml,<svg width=\"100\" height=\"100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"40\" fill=\"white\" opacity=\"0.1\"/></svg>');animation:pulse 2s infinite;"></div>
-      <div style="text-align:center;position:relative;z-index:1;">
-        <div style="font-size:3.5rem;margin-bottom:8px;animation:bounce 1s infinite;">🚨</div>
-        <h2 style="margin:0;font-size:1.4rem;font-weight:900;color:white;text-transform:uppercase;letter-spacing:2px;">Solicitud Urgente</h2>
-      </div>
-    </div>
-
-    <!-- Content -->
-    <div style="padding:24px;">
-      <div id="urgent-alert-content"></div>
-      
-      <!-- Timer circular -->
-      <div style="text-align:center;margin:24px 0;">
-        <div style="position:relative;width:120px;height:120px;margin:0 auto;">
-          <svg width="120" height="120" style="transform:rotate(-90deg);">
-            <circle cx="60" cy="60" r="54" stroke="rgba(255,255,255,0.1)" stroke-width="6" fill="none"/>
-            <circle id="timer-circle" cx="60" cy="60" r="54" stroke="var(--orange)" stroke-width="6" fill="none" stroke-dasharray="339.292" stroke-dashoffset="0" style="transition:stroke-dashoffset 1s linear;"/>
-          </svg>
-          <div id="timer-text" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:2rem;font-weight:900;color:var(--orange);">30</div>
-        </div>
-        <div style="font-size:0.85rem;color:var(--gray);margin-top:8px;">segundos para responder</div>
-      </div>
-
-      <!-- Action buttons -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <button id="reject-urgent-alert" style="padding:16px;border:2px solid var(--border);background:transparent;color:var(--light);border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;transition:all 0.2s;">
-          <i class="fa fa-times"></i> Rechazar
-        </button>
-        <button id="accept-urgent-alert" style="padding:16px;border:none;background:linear-gradient(135deg, var(--green), #059669);color:white;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 15px rgba(16,185,129,0.3);">
-          <i class="fa fa-check"></i> Aceptar
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Sound effect -->
-  <audio id="urgent-alert-sound" preload="auto">
-    <source src="data:audio/wav;base64,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" type="audio/wav">
-  </audio>
-</div>
-
-<style>
-@keyframes pulse {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.05); }
-}
-
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-
-#reject-urgent-alert:hover {
-  background: rgba(255,255,255,0.05);
-  transform: scale(1.02);
-}
-
-#accept-urgent-alert:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(16,185,129,0.4);
-}
-</style>
