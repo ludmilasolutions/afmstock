@@ -781,6 +781,27 @@
         </div>
     </div>
 
+    <!-- Modal Historial -->
+    <div class="modal fade" id="historialModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="historialModalTitle">Historial del producto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm" id="historialTable">
+                            <thead><tr><th>Tipo</th><th>Cantidad</th><th>Fecha</th><th>Usuario</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                        <p class="text-muted" id="sinHistorial">No hay movimientos para este producto.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Install Prompt -->
     <div class="install-prompt" id="installPrompt">
         <i class="bi bi-download fs-4"></i>
@@ -948,8 +969,12 @@
             overlay.classList.remove('show');
         }
 
-        document.querySelectorAll('.sidebar-item, .bottom-nav-item').forEach(el => {
-            el.addEventListener('click', () => showSection(el.dataset.section));
+        document.querySelectorAll('.sidebar-item[data-section], .bottom-nav-item').forEach(el => {
+            el.addEventListener('click', (e) => {
+                if (el.dataset.section) {
+                    showSection(el.dataset.section);
+                }
+            });
         });
 
         // Quick Actions
@@ -1049,10 +1074,9 @@
                         <td>${p.cantidad || 0}</td>
                         <td><span class="stock-badge ${stockClass}">${p.cantidad < p.stockMinimo ? 'Bajo' : 'OK'}</span></td>
                         <td>
-                            ${p.cantidad > 0 ? `<button class="btn btn-icon btn-icon-warning poner-stock-cero" data-id="${p.id}" title="Poner stock en 0"><i class="bi bi-x-circle"></i></button>` : ''}
                             <button class="btn btn-icon btn-icon-primary editar-producto" data-id="${p.id}"><i class="bi bi-pencil"></i></button>
                             <button class="btn btn-icon btn-icon-danger eliminar-producto" data-id="${p.id}"><i class="bi bi-trash"></i></button>
-                            <button class="btn btn-icon btn-icon-info ver-historial" data-id="${p.id}"><i class="bi bi-clock-history"></i></button>
+                            <button class="btn btn-icon btn-icon-info ver-historial" data-id="${p.id}" data-nombre="${p.nombre}"><i class="bi bi-clock-history"></i></button>
                         </td>
                     </tr>`;
                 }).join('');
@@ -1061,7 +1085,6 @@
             document.querySelectorAll('.editar-producto').forEach(b => b.addEventListener('click', () => editarProducto(b.dataset.id)));
             document.querySelectorAll('.eliminar-producto').forEach(b => b.addEventListener('click', () => eliminarProducto(b.dataset.id)));
             document.querySelectorAll('.ver-historial').forEach(b => b.addEventListener('click', () => verHistorial(b.dataset.id)));
-            document.querySelectorAll('.poner-stock-cero').forEach(b => b.addEventListener('click', () => ponerStockCero(b.dataset.id)));
         }
 
         document.getElementById('searchProductos')?.addEventListener('input', renderProductos);
@@ -1221,6 +1244,38 @@
             try {
                 await db.collection('productos').doc(id).update({ cantidad: 0 });
             } catch (err) { alert('Error: ' + err.message); }
+        }
+
+        const historialModal = new bootstrap.Modal(document.getElementById('historialModal'));
+
+        async function verHistorial(productoId) {
+            const btn = document.querySelector(`.ver-historial[data-id="${productoId}"]`);
+            const nombre = btn?.dataset.nombre || 'Producto';
+            document.getElementById('historialModalTitle').textContent = `Historial: ${nombre}`;
+
+            const snapshot = await db.collection('movimientos')
+                .where('productoId', '==', productoId)
+                .orderBy('fecha', 'desc')
+                .get();
+
+            const tbody = document.querySelector('#historialTable tbody');
+            if (snapshot.empty) {
+                tbody.innerHTML = '';
+                document.getElementById('sinHistorial').style.display = 'block';
+            } else {
+                document.getElementById('sinHistorial').style.display = 'none';
+                tbody.innerHTML = snapshot.docs.map(doc => {
+                    const m = doc.data();
+                    const fecha = m.fecha ? new Date(m.fecha.seconds * 1000).toLocaleString('es-AR') : '';
+                    return `<tr>
+                        <td><span class="movement-badge ${m.tipo === 'entrada' ? 'movement-entrada' : 'movement-salida'}">${m.tipo}</span></td>
+                        <td>${m.cantidad}</td>
+                        <td><small>${fecha}</small></td>
+                        <td><small>${m.usuario?.split('@')[0] || ''}</small></td>
+                    </tr>`;
+                }).join('');
+            }
+            historialModal.show();
         }
 
         // Movimientos
