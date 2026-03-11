@@ -1,8 +1,9 @@
-const CACHE_NAME = 'stockafm-v1';
+const CACHE_NAME = 'stockafm-v2';
 const urlsToCache = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './importar.html'
 ];
 
 self.addEventListener('install', event => {
@@ -30,12 +31,12 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request)
+    fetch(event.request)
       .then(response => {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
+        return response;
+      })
+      .catch(() => {
+        return caches.match(event.request);
       })
   );
 });
