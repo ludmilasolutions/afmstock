@@ -718,7 +718,7 @@
                         <input type="hidden" id="productoId">
                         <div class="mb-3">
                             <label class="form-label">Código *</label>
-                            <input type="text" class="form-control" id="productoCodigo" required>
+                            <input type="text" class="form-control" id="productoCodigo" placeholder="Opcional: código personalizado">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Nombre *</label>
@@ -1207,8 +1207,22 @@
             const form = document.getElementById('productoForm');
             if (!form.checkValidity()) { form.reportValidity(); return; }
 
+            let codigo = document.getElementById('productoCodigo').value.trim();
+            
+            // Si no hay código, generar uno automático
+            if (!codigo) {
+                const snap = await db.collection('productos').get();
+                const maxCodigo = snap.docs
+                    .map(d => d.data().codigo)
+                    .filter(c => c && c.startsWith('PROD-'))
+                    .map(c => parseInt(c.replace('PROD-', '')))
+                    .filter(n => !isNaN(n));
+                const maxNum = maxCodigo.length ? Math.max(...maxCodigo) : 0;
+                codigo = `PROD-${String(maxNum + 1).padStart(4, '0')}`;
+            }
+
             const data = {
-                codigo: document.getElementById('productoCodigo').value,
+                codigo: codigo,
                 nombre: document.getElementById('productoNombre').value,
                 cantidad: Number(document.getElementById('productoCantidad').value) || 0,
                 ubicacion: document.getElementById('productoUbicacion').value,

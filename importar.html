@@ -101,14 +101,23 @@
         const db = firebase.firestore();
 
         let productosProcesados = [];
-        let codigoCounter = 1;
+        let proximoCodigo = 1;
 
         // Verificar que esté logueado
-        auth.onAuthStateChanged(user => {
+        auth.onAuthStateChanged(async user => {
             if (!user) {
                 alert('Debes iniciar sesión primero');
                 window.location.href = 'index.html';
+                return;
             }
+            // Obtener el siguiente código disponible
+            const snap = await db.collection('productos').get();
+            const codigos = snap.docs
+                .map(d => d.data().codigo)
+                .filter(c => c && c.startsWith('PRD-'))
+                .map(c => parseInt(c.replace('PRD-', '')))
+                .filter(n => !isNaN(n));
+            proximoCodigo = codigos.length ? Math.max(...codigos) + 1 : 1;
         });
 
         document.getElementById('procesarBtn').addEventListener('click', async () => {
@@ -128,7 +137,6 @@
             const lines = text.split('\n');
             const productos = [];
             let tituloActual = '';
-            codigoCounter = 1;
 
             lines.forEach(line => {
                 line = line.trim();
@@ -150,6 +158,40 @@
                     .replace(/sin stock/gi, '')
                     .replace(/\s+/g, ' ')
                     .trim();
+
+                // Si hay un título actual, agregarlo al nombre
+                if (tituloActual && !nombreLimpio.toLowerCase().includes(tituloActual.toLowerCase())) {
+                    nombreLimpio = `${tituloActual} ${nombreLimpio}`;
+                }
+
+                // Extraer cantidad
+                let cantidad = 1;
+                const matchCantidad = line.match(/(\d+)\s*[uUxX]/);
+                if (matchCantidad) {
+                    cantidad = parseInt(matchCantidad[1]);
+                }
+
+                // Si es stock desconocido, poner cantidad 1 pero marcar para revisión
+                if (esStockDesconocido) {
+                    cantidad = 1;
+                }
+
+                // Generar código automático
+                const codigo = `PRD-${String(proximoCodigo).padStart(4, '0')}`;
+                proximoCodigo++;
+
+                productos.push({
+                    codigo,
+                    nombre: nombreLimpio,
+                    cantidad: cantidad,
+                    ubicacion: '',
+                    stockMinimo: stockMinimo,
+                    esStockDesconocido: esStockDesconocido
+                });
+            });
+
+            return productos;
+        }
 
                 // Si hay un título actual, agregarlo al nombre
                 if (tituloActual && !nombreLimpio.toLowerCase().includes(tituloActual.toLowerCase())) {
@@ -244,20 +286,40 @@
             btn.classList.add('loading');
             btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Importando...';
 
+            // Obtener códigos existentes
+            const existingSnap = await db.collection('productos').get();
+            const existingCodes = new Set(existingSnap.docs.map(d => d.data().codigo));
+
+            let maxCodigo = existingSnap.docs
+                .map(d => d.data().codigo)
+                .filter(c => c && c.startsWith('PRD-'))
+                .map(c => parseInt(c.replace('PRD-', '')))
+                .filter(n => !isNaN(n));
+            let nextCode = maxCodigo.length ? Math.max(...maxCodigo) + 1 : 1;
+
             const batch = db.batch();
             let importedCount = 0;
 
             for (const idx of indices) {
-                const p = productosProcesados[idx];
+                let p = productosProcesados[idx];
+                let codigo = p.codigo;
+
+                // Si el código ya existe, generar uno nuevo
+                while (existingCodes.has(codigo)) {
+                    codigo = `PRD-${String(nextCode).padStart(4, '0')}`;
+                    nextCode++;
+                }
+
                 const ref = db.collection('productos').doc();
                 batch.set(ref, {
-                    codigo: p.codigo,
+                    codigo: codigo,
                     nombre: p.nombre,
                     cantidad: p.cantidad,
                     ubicacion: '',
                     stockMinimo: p.stockMinimo,
                     stockDesconocido: p.esStockDesconocido
                 });
+                existingCodes.add(codigo);
                 importedCount++;
             }
 
