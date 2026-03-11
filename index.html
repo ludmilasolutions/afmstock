@@ -794,10 +794,9 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Producto *</label>
-                            <input type="text" class="form-control mb-2" id="buscarProducto" placeholder="Buscar producto...">
-                            <select class="form-select" id="movimientoProducto" required>
-                                <option value="">-- Seleccionar --</option>
-                            </select>
+                            <input type="text" class="form-control" id="buscarProducto" list="productosDatalist" placeholder="Buscar o seleccionar producto..." autocomplete="off">
+                            <datalist id="productosDatalist"></datalist>
+                            <input type="hidden" id="movimientoProducto">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Cantidad *</label>
@@ -1252,7 +1251,6 @@
         }
 
         function showEntradaProducto(productoId) {
-            showSection('movimientos');
             document.getElementById('movimientoTipo').value = 'entrada';
             productoPreseleccionado = productoId;
             new bootstrap.Modal(document.getElementById('movimientoModal')).show();
@@ -1490,26 +1488,77 @@ const movimientoModal = new bootstrap.Modal(document.getElementById('movimientoM
                 p.codigo?.toLowerCase().includes(filterLower)
             );
             
-            let opts = '<option value="">-- Seleccionar --</option>';
+            let opts = '';
             filtered.forEach(p => {
-                opts += `<option value="${p.id}">${p.codigo} - ${p.nombre}</option>`;
+                opts += `<option value="${p.codigo} - ${p.nombre}" data-id="${p.id}">`;
             });
-            document.getElementById('movimientoProducto').innerHTML = opts;
+            document.getElementById('productosDatalist').innerHTML = opts;
             
             if (productoPreseleccionado) {
-                document.getElementById('movimientoProducto').value = productoPreseleccionado;
+                const p = productos.find(x => x.id === productoPreseleccionado);
+                if (p) {
+                    document.getElementById('buscarProducto').value = `${p.codigo} - ${p.nombre}`;
+                    document.getElementById('movimientoProducto').value = productoPreseleccionado;
+                }
                 productoPreseleccionado = null;
             }
         }
 
         document.getElementById('buscarProducto').addEventListener('input', (e) => {
-            renderSelectProductos(e.target.value);
+            // Buscar el producto seleccionado en el datalist
+            const val = e.target.value;
+            const option = Array.from(document.getElementById('productosDatalist').options)
+                .find(opt => opt.value === val);
+            if (option) {
+                document.getElementById('movimientoProducto').value = option.dataset.id;
+            } else {
+                document.getElementById('movimientoProducto').value = '';
+            }
         });
 
         document.getElementById('movimientoModal').addEventListener('shown.bs.modal', () => {
             document.getElementById('movimientoForm').reset();
             document.getElementById('buscarProducto').value = '';
+            document.getElementById('movimientoProducto').value = '';
             renderSelectProductos();
+        });
+
+        // Guardar movimiento
+        document.getElementById('guardarMovimientoBtn').addEventListener('click', async () => {
+            const form = document.getElementById('movimientoForm');
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+
+            const productoId = document.getElementById('movimientoProducto').value;
+            if (!productoId) { alert('Seleccioná un producto'); return; }
+
+            const tipo = document.getElementById('movimientoTipo').value;
+            const cantidad = Number(document.getElementById('movimientoCantidad').value);
+
+            const prodRef = db.collection('productos').doc(productoId);
+            const prodDoc = await prodRef.get();
+            if (!prodDoc.exists) { alert('Producto no encontrado'); return; }
+            const prod = prodDoc.data();
+
+            if (tipo === 'salida' && prod.cantidad < cantidad) {
+                alert('Stock insuficiente'); return;
+            }
+
+            const nuevaCantidad = tipo === 'entrada' ? prod.cantidad + cantidad : prod.cantidad - cantidad;
+            const batch = db.batch();
+            batch.update(prodRef, { cantidad: nuevaCantidad });
+            batch.set(db.collection('movimientos').doc(), {
+                productoId,
+                productoNombre: prod.nombre,
+                tipo,
+                cantidad,
+                fecha: firebase.firestore.FieldValue.serverTimestamp(),
+                usuario: currentUser.email
+            });
+
+            try {
+                await batch.commit();
+                bootstrap.Modal.getInstance(document.getElementById('movimientoModal')).hide();
+            } catch (err) { alert('Error: ' + err.message); }
         });
 
         // Limpiar estado al cerrar modales
