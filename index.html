@@ -1052,13 +1052,8 @@
         document.querySelectorAll('.quick-action').forEach(btn => {
             btn.addEventListener('click', () => {
                 const action = btn.dataset.action;
-                if (action === 'entrada') {
-                    document.getElementById('movimientoTipo').value = 'entrada';
-                    showSection('movimientos');
-                    new bootstrap.Modal(document.getElementById('movimientoModal')).show();
-                } else if (action === 'salida') {
-                    document.getElementById('movimientoTipo').value = 'salida';
-                    showSection('movimientos');
+                if (action === 'entrada' || action === 'salida') {
+                    document.getElementById('movimientoTipo').value = action;
                     new bootstrap.Modal(document.getElementById('movimientoModal')).show();
                 } else if (action === 'producto') {
                     showSection('productos');
@@ -1517,7 +1512,9 @@ const movimientoModal = new bootstrap.Modal(document.getElementById('movimientoM
         });
 
         document.getElementById('movimientoModal').addEventListener('shown.bs.modal', () => {
+            const tipoActual = document.getElementById('movimientoTipo').value;
             document.getElementById('movimientoForm').reset();
+            document.getElementById('movimientoTipo').value = tipoActual;
             document.getElementById('buscarProducto').value = '';
             document.getElementById('movimientoProducto').value = '';
             renderSelectProductos();
