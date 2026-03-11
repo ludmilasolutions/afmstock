@@ -337,6 +337,17 @@
         .fab.show { display: flex; }
         .fab:hover { transform: scale(1.1); }
 
+        /* Fix modal backdrop */
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 5);
+        }
+        .modal-backdrop.show {
+            opacity: 0.5;
+        }
+        body.modal-open {
+            overflow: auto !important;
+        }
+
         /* Modals */
         .modal-content {
             border: none;
@@ -586,14 +597,15 @@
             <section id="productosSection" style="display:none;" class="fade-in">
                 <div class="search-box">
                     <i class="bi bi-search text-muted"></i>
-                    <input type="text" id="searchProductos" placeholder="Buscar productos...">
+                    <input type="text" id="searchProductos" placeholder="Buscar productos..." autocomplete="off">
                 </div>
-                <div class="px-3 mb-2">
-                    <button class="btn btn-outline-success btn-sm" id="exportExcelBtn">
-                        <i class="bi bi-file-earmark-excel"></i> Exportar Excel
-                    </button>
-                </div>
-                <div class="table-container">
+                <div class="table-container" id="productosTableContainer">
+                    <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+                        <span class="text-muted small" id="productCount">0 productos</span>
+                        <button class="btn btn-outline-success btn-sm" id="exportExcelBtn">
+                            <i class="bi bi-file-earmark-excel"></i> Exportar
+                        </button>
+                    </div>
                     <table class="table" id="productosTable">
                         <thead><tr><th>Código</th><th>Nombre</th><th>Stock</th><th>Estado</th><th>Acciones</th></tr></thead>
                         <tbody></tbody>
@@ -1140,6 +1152,12 @@
                 p.codigo?.toLowerCase().includes(search)
             );
 
+            // Actualizar contador
+            const countEl = document.getElementById('productCount');
+            if (countEl) {
+                countEl.textContent = `${filtered.length} producto${filtered.length !== 1 ? 's' : ''}`;
+            }
+
             const tbody = document.querySelector('#productosTable tbody');
             if (filtered.length === 0) {
                 tbody.innerHTML = '';
@@ -1155,8 +1173,6 @@
                         <td>${p.cantidad || 0}</td>
                         <td><span class="stock-badge ${stockClass}">${p.cantidad < p.stockMinimo ? 'Bajo' : 'OK'}</span></td>
                         <td>
-                            <button class="btn btn-icon btn-success" title="Entrada rápida" data-action="entrada" data-id="${p.id}"><i class="bi bi-plus"></i></button>
-                            <button class="btn btn-icon btn-danger" title="Salida rápida" data-action="salida" data-id="${p.id}"><i class="bi bi-dash"></i></button>
                             <button class="btn btn-icon btn-warning" title="Ajustar stock" data-action="ajustar" data-id="${p.id}" data-stock="${p.cantidad}"><i class="bi bi-pencil-square"></i></button>
                             <button class="btn btn-icon btn-icon-primary editar-producto" data-id="${p.id}"><i class="bi bi-pencil"></i></button>
                             <button class="btn btn-icon btn-icon-danger eliminar-producto" data-id="${p.id}"><i class="bi bi-trash"></i></button>
@@ -1170,22 +1186,14 @@
             document.querySelectorAll('.eliminar-producto').forEach(b => b.addEventListener('click', () => eliminarProducto(b.dataset.id)));
             document.querySelectorAll('.ver-historial').forEach(b => b.addEventListener('click', () => verHistorial(b.dataset.id)));
             
-            // Botones de movimiento rápido
-            document.querySelectorAll('[data-action="entrada"], [data-action="salida"], [data-action="ajustar"]').forEach(b => {
+            // Botón de ajustar stock
+            document.querySelectorAll('[data-action="ajustar"]').forEach(b => {
                 b.addEventListener('click', () => {
-                    const id = b.dataset.id;
-                    const action = b.dataset.action;
-                    if (action === 'entrada' || action === 'salida') {
-                        productoPreseleccionado = id;
-                        document.getElementById('movimientoTipo').value = action;
-                        new bootstrap.Modal(document.getElementById('movimientoModal')).show();
-                    } else if (action === 'ajustar') {
-                        const stockActual = parseInt(b.dataset.stock);
-                        document.getElementById('ajustarProductoId').value = id;
-                        document.getElementById('ajustarStockActual').value = stockActual;
-                        document.getElementById('ajustarStockNuevo').value = stockActual;
-                        new bootstrap.Modal(document.getElementById('ajustarModal')).show();
-                    }
+                    const stockActual = parseInt(b.dataset.stock);
+                    document.getElementById('ajustarProductoId').value = b.dataset.id;
+                    document.getElementById('ajustarStockActual').value = stockActual;
+                    document.getElementById('ajustarStockNuevo').value = stockActual;
+                    new bootstrap.Modal(document.getElementById('ajustarModal')).show();
                 });
             });
         }
@@ -1502,6 +1510,15 @@ const movimientoModal = new bootstrap.Modal(document.getElementById('movimientoM
             document.getElementById('movimientoForm').reset();
             document.getElementById('buscarProducto').value = '';
             renderSelectProductos();
+        });
+
+        // Limpiar estado al cerrar modales
+        ['productoModal', 'movimientoModal', 'ajustarModal', 'historialModal'].forEach(modalId => {
+            document.getElementById(modalId)?.addEventListener('hidden.bs.modal', () => {
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            });
         });
 
         document.getElementById('productoModal').addEventListener('hidden.bs.modal', () => document.getElementById('productoForm').reset());
