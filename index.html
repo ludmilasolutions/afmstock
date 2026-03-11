@@ -849,6 +849,15 @@
         const fab = document.getElementById('fabBtn');
         const pageTitle = document.getElementById('pageTitle');
 
+        fab.addEventListener('click', () => {
+            if (currentSection === 'productos') {
+                document.getElementById('productoForm').reset();
+                document.getElementById('productoId').value = '';
+                document.getElementById('productoModalTitle').textContent = 'Nuevo Producto';
+                productoModal.show();
+            }
+        });
+
         const sections = {
             inicio: document.getElementById('inicioSection'),
             productos: document.getElementById('productosSection'),
@@ -991,6 +1000,9 @@
                     new bootstrap.Modal(document.getElementById('movimientoModal')).show();
                 } else if (action === 'producto') {
                     showSection('productos');
+                    document.getElementById('productoForm').reset();
+                    document.getElementById('productoId').value = '';
+                    document.getElementById('productoModalTitle').textContent = 'Nuevo Producto';
                     new bootstrap.Modal(document.getElementById('productoModal')).show();
                 } else if (action === 'reportes') {
                     showSection('reportes');
@@ -1183,10 +1195,12 @@
         // CRUD Productos
         const productoModal = new bootstrap.Modal(document.getElementById('productoModal'));
         
-        document.getElementById('nuevoProductoBtn')?.addEventListener('click', () => {
-            document.getElementById('productoForm').reset();
-            document.getElementById('productoId').value = '';
-            document.getElementById('productoModalTitle').textContent = 'Nuevo Producto';
+        document.getElementById('productoModal').addEventListener('shown.bs.modal', () => {
+            if (!document.getElementById('productoId').value) {
+                document.getElementById('productoForm').reset();
+                document.getElementById('productoId').value = '';
+                document.getElementById('productoModalTitle').textContent = 'Nuevo Producto';
+            }
         });
 
         document.getElementById('guardarProductoBtn').addEventListener('click', async () => {
