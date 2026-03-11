@@ -588,6 +588,11 @@
                     <i class="bi bi-search text-muted"></i>
                     <input type="text" id="searchProductos" placeholder="Buscar productos...">
                 </div>
+                <div class="px-3 mb-2">
+                    <button class="btn btn-outline-success btn-sm" id="exportExcelBtn">
+                        <i class="bi bi-file-earmark-excel"></i> Exportar Excel
+                    </button>
+                </div>
                 <div class="table-container">
                     <table class="table" id="productosTable">
                         <thead><tr><th>Código</th><th>Nombre</th><th>Stock</th><th>Estado</th><th>Acciones</th></tr></thead>
@@ -736,6 +741,18 @@
                             <label class="form-label">Stock mínimo *</label>
                             <input type="number" class="form-control" id="productoStockMin" value="5" min="0">
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label">Marca</label>
+                            <input type="text" class="form-control" id="productoMarca" placeholder="Ej: Philips, Sica">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Proveedor</label>
+                            <input type="text" class="form-control" id="productoProveedor" placeholder="Ej: Casa Electricista">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Notas</label>
+                            <textarea class="form-control" id="productoNotas" rows="2" placeholder="Información adicional..."></textarea>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -765,7 +782,10 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Producto *</label>
-                            <select class="form-select" id="movimientoProducto" required></select>
+                            <input type="text" class="form-control mb-2" id="buscarProducto" placeholder="Buscar producto...">
+                            <select class="form-select" id="movimientoProducto" required>
+                                <option value="">-- Seleccionar --</option>
+                            </select>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Cantidad *</label>
@@ -797,6 +817,37 @@
                         </table>
                         <p class="text-muted" id="sinHistorial">No hay movimientos para este producto.</p>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ajustar Inventario -->
+    <div class="modal fade" id="ajustarModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Ajustar Inventario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="ajustarProductoId">
+                    <div class="mb-3">
+                        <label class="form-label">Stock actual</label>
+                        <input type="number" class="form-control" id="ajustarStockActual" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nuevo stock</label>
+                        <input type="number" class="form-control" id="ajustarStockNuevo" min="0" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Motivo del ajuste</label>
+                        <input type="text" class="form-control" id="ajustarMotivo" placeholder="Ej: Inventario físico, corrección, etc.">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-warning" id="guardarAjusteBtn">Guardar Ajuste</button>
                 </div>
             </div>
         </div>
@@ -1031,6 +1082,24 @@
             renderReportes();
         }
 
+        // Exportar a Excel
+        document.getElementById('exportExcelBtn')?.addEventListener('click', () => {
+            if (productos.length === 0) { alert('No hay productos para exportar'); return; }
+            
+            let csv = 'Código,Nombre,Cantidad,Stock Mínimo,Ubicación,Estado\n';
+            productos.forEach(p => {
+                const estado = p.cantidad < p.stockMinimo ? 'Stock Bajo' : 'OK';
+                const fila = `"${p.codigo || ''}","${p.nombre || ''}",${p.cantidad || 0},${p.stockMinimo || 0},"${p.ubicacion || ''}","${estado}"`;
+                csv += fila + '\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `stock_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        });
+
         function renderDashboard() {
             document.getElementById('totalProductos').textContent = productos.length;
             
@@ -1086,6 +1155,9 @@
                         <td>${p.cantidad || 0}</td>
                         <td><span class="stock-badge ${stockClass}">${p.cantidad < p.stockMinimo ? 'Bajo' : 'OK'}</span></td>
                         <td>
+                            <button class="btn btn-icon btn-success" title="Entrada rápida" data-action="entrada" data-id="${p.id}"><i class="bi bi-plus"></i></button>
+                            <button class="btn btn-icon btn-danger" title="Salida rápida" data-action="salida" data-id="${p.id}"><i class="bi bi-dash"></i></button>
+                            <button class="btn btn-icon btn-warning" title="Ajustar stock" data-action="ajustar" data-id="${p.id}" data-stock="${p.cantidad}"><i class="bi bi-pencil-square"></i></button>
                             <button class="btn btn-icon btn-icon-primary editar-producto" data-id="${p.id}"><i class="bi bi-pencil"></i></button>
                             <button class="btn btn-icon btn-icon-danger eliminar-producto" data-id="${p.id}"><i class="bi bi-trash"></i></button>
                             <button class="btn btn-icon btn-icon-info ver-historial" data-id="${p.id}" data-nombre="${p.nombre}"><i class="bi bi-clock-history"></i></button>
@@ -1097,6 +1169,25 @@
             document.querySelectorAll('.editar-producto').forEach(b => b.addEventListener('click', () => editarProducto(b.dataset.id)));
             document.querySelectorAll('.eliminar-producto').forEach(b => b.addEventListener('click', () => eliminarProducto(b.dataset.id)));
             document.querySelectorAll('.ver-historial').forEach(b => b.addEventListener('click', () => verHistorial(b.dataset.id)));
+            
+            // Botones de movimiento rápido
+            document.querySelectorAll('[data-action="entrada"], [data-action="salida"], [data-action="ajustar"]').forEach(b => {
+                b.addEventListener('click', () => {
+                    const id = b.dataset.id;
+                    const action = b.dataset.action;
+                    if (action === 'entrada' || action === 'salida') {
+                        productoPreseleccionado = id;
+                        document.getElementById('movimientoTipo').value = action;
+                        new bootstrap.Modal(document.getElementById('movimientoModal')).show();
+                    } else if (action === 'ajustar') {
+                        const stockActual = parseInt(b.dataset.stock);
+                        document.getElementById('ajustarProductoId').value = id;
+                        document.getElementById('ajustarStockActual').value = stockActual;
+                        document.getElementById('ajustarStockNuevo').value = stockActual;
+                        new bootstrap.Modal(document.getElementById('ajustarModal')).show();
+                    }
+                });
+            });
         }
 
         document.getElementById('searchProductos')?.addEventListener('input', renderProductos);
@@ -1226,17 +1317,47 @@
                 nombre: document.getElementById('productoNombre').value,
                 cantidad: Number(document.getElementById('productoCantidad').value) || 0,
                 ubicacion: document.getElementById('productoUbicacion').value,
-                stockMinimo: Number(document.getElementById('productoStockMin').value) || 5
+                stockMinimo: Number(document.getElementById('productoStockMin').value) || 5,
+                marca: document.getElementById('productoMarca').value,
+                proveedor: document.getElementById('productoProveedor').value,
+                notas: document.getElementById('productoNotas').value
             };
 
             try {
                 const id = document.getElementById('productoId').value;
+                data.fechaEdicion = firebase.firestore.FieldValue.serverTimestamp();
+                data.usuarioEdicion = currentUser.email;
+                
                 if (id) {
+                    // Guardar en historial antes de actualizar
+                    const docAntiguo = await db.collection('productos').doc(id).get();
+                    if (docAntiguo.exists) {
+                        await db.collection('historialEdiciones').add({
+                            productoId: id,
+                            productoNombre: docAntiguo.data().nombre,
+                            datosAnteriores: docAntiguo.data(),
+                            datosNuevos: data,
+                            tipo: 'edicion',
+                            usuario: currentUser.email,
+                            fecha: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
                     await db.collection('productos').doc(id).update(data);
                 } else {
+                    data.fechaCreacion = firebase.firestore.FieldValue.serverTimestamp();
+                    data.usuarioCreacion = currentUser.email;
                     const existing = await db.collection('productos').where('codigo', '==', data.codigo).get();
                     if (!existing.empty) { alert('Ya existe un producto con ese código'); return; }
-                    await db.collection('productos').add(data);
+                    const nuevoDoc = await db.collection('productos').add(data);
+                    // Guardar historial de creación
+                    await db.collection('historialEdiciones').add({
+                        productoId: nuevoDoc.id,
+                        productoNombre: data.nombre,
+                        datosNuevos: data,
+                        tipo: 'creacion',
+                        usuario: currentUser.email,
+                        fecha: firebase.firestore.FieldValue.serverTimestamp()
+                    });
                 }
                 productoModal.hide();
             } catch (err) { alert('Error: ' + err.message); }
@@ -1252,6 +1373,9 @@
             document.getElementById('productoCantidad').value = p.cantidad || 0;
             document.getElementById('productoUbicacion').value = p.ubicacion || '';
             document.getElementById('productoStockMin').value = p.stockMinimo || 5;
+            document.getElementById('productoMarca').value = p.marca || '';
+            document.getElementById('productoProveedor').value = p.proveedor || '';
+            document.getElementById('productoNotas').value = p.notas || '';
             document.getElementById('productoModalTitle').textContent = 'Editar Producto';
             productoModal.show();
         }
@@ -1266,6 +1390,47 @@
                 await batch.commit();
             } catch (err) { alert('Error: ' + err.message); }
         }
+
+        // Guardar ajuste de inventario
+        document.getElementById('guardarAjusteBtn').addEventListener('click', async () => {
+            const productoId = document.getElementById('ajustarProductoId').value;
+            const stockNuevo = parseInt(document.getElementById('ajustarStockNuevo').value);
+            const motivo = document.getElementById('ajustarMotivo').value;
+
+            if (isNaN(stockNuevo) || stockNuevo < 0) {
+                alert('Stock inválido');
+                return;
+            }
+
+            try {
+                // Obtener stock actual para registrar el ajuste
+                const doc = await db.collection('productos').doc(productoId).get();
+                const stockAnterior = doc.data().cantidad;
+
+                // Actualizar stock
+                await db.collection('productos').doc(productoId).update({
+                    cantidad: stockNuevo,
+                    fechaEdicion: firebase.firestore.FieldValue.serverTimestamp(),
+                    usuarioEdicion: currentUser.email
+                });
+
+                // Registrar en historial de ediciones como ajuste
+                await db.collection('historialEdiciones').add({
+                    productoId: productoId,
+                    productoNombre: doc.data().nombre,
+                    tipo: 'ajuste',
+                    cantidadAnterior: stockAnterior,
+                    cantidadNueva: stockNuevo,
+                    motivo: motivo,
+                    usuario: currentUser.email,
+                    fecha: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                bootstrap.Modal.getInstance(document.getElementById('ajustarModal')).hide();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        });
 
         async function ponerStockCero(id) {
             if (!confirm('¿Poner stock en 0? El producto aparecerá como stock crítico.')) return;
@@ -1310,12 +1475,16 @@
 const movimientoModal = new bootstrap.Modal(document.getElementById('movimientoModal'));
         let productoPreseleccionado = null;
 
-        async function llenarSelectProductos() {
-            const snap = await db.collection('productos').get();
+        function renderSelectProductos(filter = '') {
+            const filterLower = filter.toLowerCase();
+            const filtered = productos.filter(p => 
+                p.nombre?.toLowerCase().includes(filterLower) || 
+                p.codigo?.toLowerCase().includes(filterLower)
+            );
+            
             let opts = '<option value="">-- Seleccionar --</option>';
-            snap.forEach(d => {
-                const p = d.data();
-                opts += `<option value="${d.id}">${p.codigo} - ${p.nombre}</option>`;
+            filtered.forEach(p => {
+                opts += `<option value="${p.id}">${p.codigo} - ${p.nombre}</option>`;
             });
             document.getElementById('movimientoProducto').innerHTML = opts;
             
@@ -1325,10 +1494,16 @@ const movimientoModal = new bootstrap.Modal(document.getElementById('movimientoM
             }
         }
 
+        document.getElementById('buscarProducto').addEventListener('input', (e) => {
+            renderSelectProductos(e.target.value);
+        });
+
         document.getElementById('movimientoModal').addEventListener('shown.bs.modal', () => {
             document.getElementById('movimientoForm').reset();
-            llenarSelectProductos();
+            document.getElementById('buscarProducto').value = '';
+            renderSelectProductos();
         });
+
         document.getElementById('productoModal').addEventListener('hidden.bs.modal', () => document.getElementById('productoForm').reset());
     </script>
 </body>

@@ -102,6 +102,7 @@
 
         let productosProcesados = [];
         let proximoCodigo = 1;
+        let currentUser = null;
 
         // Verificar que esté logueado
         auth.onAuthStateChanged(async user => {
@@ -110,6 +111,7 @@
                 window.location.href = 'index.html';
                 return;
             }
+            currentUser = user;
             // Obtener el siguiente código disponible
             const snap = await db.collection('productos').get();
             const codigos = snap.docs
@@ -121,16 +123,30 @@
         });
 
         document.getElementById('procesarBtn').addEventListener('click', async () => {
+            if (!currentUser) {
+                alert('Espera a que cargue la sesión');
+                return;
+            }
+
             const file = document.getElementById('archivoTXT').files[0];
             if (!file) { alert('Seleccioná un archivo'); return; }
 
             const stockMinimo = parseInt(document.getElementById('stockMinimo').value) || 5;
             
-            const text = await file.text();
-            productosProcesados = parseStockText(text, stockMinimo);
-            
-            renderPreview();
-            document.getElementById('previewCard').style.display = 'block';
+            try {
+                const text = await file.text();
+                productosProcesados = parseStockText(text, stockMinimo);
+                
+                if (productosProcesados.length === 0) {
+                    alert('No se encontraron productos en el archivo');
+                    return;
+                }
+                
+                renderPreview();
+                document.getElementById('previewCard').style.display = 'block';
+            } catch (err) {
+                alert('Error al procesar: ' + err.message);
+            }
         });
 
         function parseStockText(text, stockMinimo) {
@@ -179,40 +195,6 @@
                 // Generar código automático
                 const codigo = `PRD-${String(proximoCodigo).padStart(4, '0')}`;
                 proximoCodigo++;
-
-                productos.push({
-                    codigo,
-                    nombre: nombreLimpio,
-                    cantidad: cantidad,
-                    ubicacion: '',
-                    stockMinimo: stockMinimo,
-                    esStockDesconocido: esStockDesconocido
-                });
-            });
-
-            return productos;
-        }
-
-                // Si hay un título actual, agregarlo al nombre
-                if (tituloActual && !nombreLimpio.toLowerCase().includes(tituloActual.toLowerCase())) {
-                    nombreLimpio = `${tituloActual} ${nombreLimpio}`;
-                }
-
-                // Extraer cantidad
-                let cantidad = 1;
-                const matchCantidad = line.match(/(\d+)\s*[uUxX]/);
-                if (matchCantidad) {
-                    cantidad = parseInt(matchCantidad[1]);
-                }
-
-                // Si es stock desconocido, poner cantidad 1 pero marcar para revisión
-                if (esStockDesconocido) {
-                    cantidad = 1;
-                }
-
-                // Generar código automático
-                const codigo = `PRD-${String(codigoCounter).padStart(4, '0')}`;
-                codigoCounter++;
 
                 productos.push({
                     codigo,
