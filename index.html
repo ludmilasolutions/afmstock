@@ -454,6 +454,7 @@
         }
         .movement-entrada { background: var(--success-light); color: var(--success); }
         .movement-salida { background: var(--danger-light); color: var(--danger); }
+        .movement-creacion { background: rgba(79,70,229,0.1); color: var(--primary); }
 
         /* Action Buttons */
         .btn-icon {
@@ -1471,6 +1472,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="search_engine.js"></script>
 
     <script>
         const firebaseConfig = {
@@ -1533,6 +1535,12 @@
             confirmModalBS.show();
         }
 
+        // Modals
+        const productoModal = new bootstrap.Modal(document.getElementById('productoModal'));
+        const movimientoModal = new bootstrap.Modal(document.getElementById('movimientoModal'));
+        const historialModal = new bootstrap.Modal(document.getElementById('historialModal'));
+        const ajustarModal = new bootstrap.Modal(document.getElementById('ajustarModal'));
+
         // DOM Elements
         const loginPage = document.getElementById('loginPage');
         const mainApp = document.getElementById('mainApp');
@@ -1549,7 +1557,11 @@
                 document.getElementById('productoModalTitle').textContent = 'Nuevo Producto';
                 productoModal.show();
             } else {
-                new bootstrap.Modal(document.getElementById('movimientoModal')).show();
+                document.getElementById('buscarProducto').value = '';
+                document.getElementById('movimientoProducto').value = '';
+                document.getElementById('productosDropdown').style.display = 'none';
+                mostrarStockIndicador(null);
+                movimientoModal.show();
             }
         });
 
@@ -1589,8 +1601,8 @@
         });
 
         // Service Worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+            navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW Error:', err));
         }
 
         // Auth
@@ -1693,13 +1705,17 @@
                 const action = btn.dataset.action;
                 if (action === 'entrada' || action === 'salida') {
                     document.getElementById('movimientoTipo').value = action;
-                    new bootstrap.Modal(document.getElementById('movimientoModal')).show();
+                    document.getElementById('buscarProducto').value = '';
+                    document.getElementById('movimientoProducto').value = '';
+                    document.getElementById('productosDropdown').style.display = 'none';
+                    mostrarStockIndicador(null);
+                    movimientoModal.show();
                 } else if (action === 'producto') {
                     showSection('productos');
                     document.getElementById('productoForm').reset();
                     document.getElementById('productoId').value = '';
                     document.getElementById('productoModalTitle').textContent = 'Nuevo Producto';
-                    new bootstrap.Modal(document.getElementById('productoModal')).show();
+                    productoModal.show();
                 } else if (action === 'reportes') {
                     showSection('reportes');
                 }
@@ -1767,10 +1783,12 @@
                 tbody.innerHTML = ultimos.map(m => {
                     const fecha = m.fecha ? new Date(m.fecha.seconds * 1000) : null;
                     const hora = fecha ? fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '';
+                    const typeIcon = m.tipo === 'entrada' ? 'down' : (m.tipo === 'salida' ? 'up' : 'plus');
+                    const typeLabel = m.tipo === 'creacion' ? 'creación' : m.tipo;
                     return `<tr>
                         <td>${m.productoNombre || '?'}</td>
-                        <td><span class="movement-badge ${m.tipo === 'entrada' ? 'movement-entrada' : 'movement-salida'}">
-                            <i class="bi bi-arrow-${m.tipo === 'entrada' ? 'down' : 'up'}-circle"></i> ${m.tipo}
+                        <td><span class="movement-badge movement-${m.tipo}">
+                            <i class="bi bi-${typeIcon}-circle"></i> ${typeLabel}
                         </span></td>
                         <td>${m.cantidad}</td>
                         <td>${hora}</td>
@@ -1800,12 +1818,24 @@
         }
 
         function renderProductos() {
-            const search = norm(document.getElementById('searchProductos')?.value || '');
-            const filtered = productos.filter(p => {
-                const matchSearch = !search || norm(p.nombre).includes(search) || norm(p.codigo).includes(search);
-                const matchCat = !currentCatFilter || p.categoria === currentCatFilter;
-                return matchSearch && matchCat;
-            }).sort((a, b) => (a.nombre || '').trim().localeCompare((b.nombre || '').trim(), 'es', { sensitivity: 'base' }));
+            const search = document.getElementById('searchProductos')?.value || '';
+            let filtered = [];
+
+            if (search.trim() !== '') {
+                // Usar el nuevo motor de búsqueda con tolerancia a errores y scoring
+                filtered = SearchEngine.performLocalSearch(productos, search);
+                
+                // Aplicar filtro de categoría si existe
+                if (currentCatFilter) {
+                    filtered = filtered.filter(p => p.categoria === currentCatFilter);
+                }
+            } else {
+                // Búsqueda simple por categoría o lista completa
+                filtered = productos.filter(p => {
+                    const matchCat = !currentCatFilter || p.categoria === currentCatFilter;
+                    return matchCat;
+                }).sort((a, b) => (a.nombre || '').trim().localeCompare((b.nombre || '').trim(), 'es', { sensitivity: 'base' }));
+            }
 
             const countEl = document.getElementById('productCount');
             if (countEl) countEl.textContent = `${filtered.length} producto${filtered.length !== 1 ? 's' : ''}`;
@@ -1814,61 +1844,63 @@
             const cardsEl  = document.getElementById('productosCards');
             const emptyEl  = document.getElementById('sinProductos');
 
-            if (filtered.length === 0) {
-                tbody.innerHTML = '';
-                cardsEl.innerHTML = '';
-                emptyEl.style.display = 'block';
-            } else {
-                emptyEl.style.display = 'none';
+            const keywords = search.trim().split(/\s+/).filter(k => k.length > 0);
 
-                // ── Tabla (desktop) ──────────────────────────────────────
-                tbody.innerHTML = filtered.map(p => {
-                    let stockClass = 'stock-ok';
-                    if (p.cantidad < p.stockMinimo) stockClass = p.cantidad === 0 ? 'stock-critical' : 'stock-low';
-                    const catBadge = p.categoria ? `<span class="categoria-badge"><i class="bi bi-tag"></i>${p.categoria}</span>` : '';
-                    return `<tr>
-                        <td>${p.nombre || ''}<br><small>${catBadge}</small></td>
-                        <td><small class="text-muted">${p.ubicacion || '—'}</small></td>
-                        <td><small class="text-muted">${p.marca || '—'}</small></td>
-                        <td>${p.cantidad || 0}</td>
-                        <td><span class="stock-badge ${stockClass}">${p.cantidad < p.stockMinimo ? 'Bajo' : 'OK'}</span></td>
-                        <td>
-                            <button class="btn btn-icon btn-warning" data-action="ajustar" data-id="${p.id}" data-stock="${p.cantidad}"><i class="bi bi-pencil-square"></i></button>
-                            <button class="btn btn-icon btn-icon-primary editar-producto" data-id="${p.id}"><i class="bi bi-pencil"></i></button>
-                            <button class="btn btn-icon btn-icon-danger eliminar-producto" data-id="${p.id}"><i class="bi bi-trash"></i></button>
-                            <button class="btn btn-icon btn-icon-info ver-historial" data-id="${p.id}" data-nombre="${p.nombre}"><i class="bi bi-clock-history"></i></button>
-                        </td>
-                    </tr>`;
-                }).join('');
+            // ── Tabla (desktop) ──────────────────────────────────────
+            tbody.innerHTML = filtered.map(p => {
+                let stockClass = 'stock-ok';
+                if (p.cantidad < p.stockMinimo) stockClass = p.cantidad === 0 ? 'stock-critical' : 'stock-low';
+                const catBadge = p.categoria ? `<span class="categoria-badge"><i class="bi bi-tag"></i>${p.categoria}</span>` : '';
+                
+                // Resaltar términos de búsqueda en el nombre
+                const highlightedName = SearchEngine.highlightText(p.nombre || '', keywords);
 
-                // ── Cards (móvil) ────────────────────────────────────────
-                cardsEl.innerHTML = filtered.map(p => {
-                    let stockClass = 'stock-ok', stockColor = 'var(--success)';
-                    if (p.cantidad < p.stockMinimo) {
-                        stockClass = p.cantidad === 0 ? 'stock-critical' : 'stock-low';
-                        stockColor = p.cantidad === 0 ? 'var(--danger)' : 'var(--warning)';
-                    }
-                    const catBadge = p.categoria ? `<span class="categoria-badge"><i class="bi bi-tag"></i>${p.categoria}</span>` : '';
-                    const metaItems = [
-                        p.ubicacion ? `<span><i class="bi bi-geo-alt"></i>${p.ubicacion}</span>` : '',
-                        p.marca     ? `<span><i class="bi bi-building"></i>${p.marca}</span>`    : '',
-                    ].filter(Boolean).join('');
-                    return `<div class="prod-card">
-                        <div class="prod-card-name">${p.nombre || ''}</div>
-                        <div class="prod-card-stock">
-                            <span class="prod-card-stock-num" style="color:${stockColor}">${p.cantidad || 0}</span>
-                            <span class="stock-badge ${stockClass}">${p.cantidad < p.stockMinimo ? 'Bajo' : 'OK'}</span>
-                        </div>
-                        <div class="prod-card-meta">${metaItems || ''}${catBadge}</div>
-                        <div class="prod-card-actions">
-                            <button class="btn btn-icon btn-warning" data-action="ajustar" data-id="${p.id}" data-stock="${p.cantidad}" title="Ajustar"><i class="bi bi-pencil-square"></i></button>
-                            <button class="btn btn-icon btn-icon-primary editar-producto" data-id="${p.id}" title="Editar"><i class="bi bi-pencil"></i></button>
-                            <button class="btn btn-icon btn-icon-danger eliminar-producto" data-id="${p.id}" title="Eliminar"><i class="bi bi-trash"></i></button>
-                            <button class="btn btn-icon btn-icon-info ver-historial" data-id="${p.id}" data-nombre="${p.nombre}" title="Historial"><i class="bi bi-clock-history"></i></button>
-                        </div>
-                    </div>`;
-                }).join('');
-            }
+                return `<tr>
+                    <td>${highlightedName}<br><small>${catBadge}</small></td>
+                    <td><small class="text-muted">${p.ubicacion || '—'}</small></td>
+                    <td><small class="text-muted">${p.marca || '—'}</small></td>
+                    <td>${p.cantidad || 0}</td>
+                    <td><span class="stock-badge ${stockClass}">${p.cantidad < p.stockMinimo ? 'Bajo' : 'OK'}</span></td>
+                    <td>
+                        <button class="btn btn-icon btn-warning" data-action="ajustar" data-id="${p.id}" data-stock="${p.cantidad}"><i class="bi bi-pencil-square"></i></button>
+                        <button class="btn btn-icon btn-icon-primary editar-producto" data-id="${p.id}"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-icon btn-icon-danger eliminar-producto" data-id="${p.id}"><i class="bi bi-trash"></i></button>
+                        <button class="btn btn-icon btn-icon-info ver-historial" data-id="${p.id}" data-nombre="${p.nombre}"><i class="bi bi-clock-history"></i></button>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            // ── Cards (móvil) ────────────────────────────────────────
+            cardsEl.innerHTML = filtered.map(p => {
+                let stockClass = 'stock-ok', stockColor = 'var(--success)';
+                if (p.cantidad < p.stockMinimo) {
+                    stockClass = p.cantidad === 0 ? 'stock-critical' : 'stock-low';
+                    stockColor = p.cantidad === 0 ? 'var(--danger)' : 'var(--warning)';
+                }
+                const catBadge = p.categoria ? `<span class="categoria-badge"><i class="bi bi-tag"></i>${p.categoria}</span>` : '';
+                const metaItems = [
+                    p.ubicacion ? `<span><i class="bi bi-geo-alt"></i>${p.ubicacion}</span>` : '',
+                    p.marca     ? `<span><i class="bi bi-building"></i>${p.marca}</span>`    : '',
+                ].filter(Boolean).join('');
+                
+                // Resaltar términos de búsqueda en el nombre
+                const highlightedName = SearchEngine.highlightText(p.nombre || '', keywords);
+
+                return `<div class="prod-card">
+                    <div class="prod-card-name">${highlightedName}</div>
+                    <div class="prod-card-stock">
+                        <span class="prod-card-stock-num" style="color:${stockColor}">${p.cantidad || 0}</span>
+                        <span class="stock-badge ${stockClass}">${p.cantidad < p.stockMinimo ? 'Bajo' : 'OK'}</span>
+                    </div>
+                    <div class="prod-card-meta">${metaItems || ''}${catBadge}</div>
+                    <div class="prod-card-actions">
+                        <button class="btn btn-icon btn-warning" data-action="ajustar" data-id="${p.id}" data-stock="${p.cantidad}" title="Ajustar"><i class="bi bi-pencil-square"></i></button>
+                        <button class="btn btn-icon btn-icon-primary editar-producto" data-id="${p.id}" title="Editar"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-icon btn-icon-danger eliminar-producto" data-id="${p.id}" title="Eliminar"><i class="bi bi-trash"></i></button>
+                        <button class="btn btn-icon btn-icon-info ver-historial" data-id="${p.id}" data-nombre="${p.nombre}" title="Historial"><i class="bi bi-clock-history"></i></button>
+                    </div>
+                </div>`;
+            }).join('');
 
             // Bind events (tabla + cards, ambos en el DOM)
             document.querySelectorAll('.editar-producto').forEach(b => b.addEventListener('click', () => editarProducto(b.dataset.id)));
@@ -1907,10 +1939,12 @@
                 // ── Tabla (desktop) ──────────────────────────────────────
                 tbody.innerHTML = filtered.map(m => {
                     const fecha = m.fecha ? new Date(m.fecha.seconds * 1000).toLocaleString('es-AR') : '';
+                    const typeIcon = m.tipo === 'entrada' ? 'down' : (m.tipo === 'salida' ? 'up' : 'plus');
+                    const typeLabel = m.tipo === 'creacion' ? 'creación' : m.tipo;
                     return `<tr>
                         <td><strong>${m.productoNombre || '?'}</strong></td>
-                        <td><span class="movement-badge ${m.tipo === 'entrada' ? 'movement-entrada' : 'movement-salida'}">
-                            <i class="bi bi-arrow-${m.tipo === 'entrada' ? 'down' : 'up'}-circle"></i> ${m.tipo}
+                        <td><span class="movement-badge movement-${m.tipo}">
+                            <i class="bi bi-arrow-${typeIcon}-circle"></i> ${typeLabel}
                         </span></td>
                         <td><strong>${m.cantidad}</strong></td>
                         <td><small class="text-muted">${m.nota || '—'}</small></td>
@@ -1926,10 +1960,12 @@
                     const horaStr   = fecha ? fecha.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' }) : '';
                     const usuario   = m.usuario?.split('@')[0] || '';
                     const esEntrada = m.tipo === 'entrada';
+                    const esCreacion = m.tipo === 'creacion';
+                    const typeIcon = esEntrada ? 'down' : (m.tipo === 'salida' ? 'up' : 'plus-lg');
                     const signo     = esEntrada ? '+' : '−';
                     return `<div class="mov-card">
                         <div class="mov-card-icon ${m.tipo}">
-                            <i class="bi bi-arrow-${esEntrada ? 'down' : 'up'}-circle-fill"></i>
+                            <i class="bi bi-arrow-${typeIcon}-circle-fill"></i>
                         </div>
                         <div class="mov-card-body">
                             <div class="mov-card-name">${m.productoNombre || '?'}</div>
@@ -1937,7 +1973,7 @@
                             ${m.nota ? `<div class="mov-nota">${m.nota}</div>` : ''}
                         </div>
                         <div class="mov-card-right">
-                            <span class="mov-card-qty ${m.tipo}">${signo}${m.cantidad}</span>
+                            <span class="mov-card-qty ${m.tipo}">${esCreacion ? '' : signo}${m.cantidad}</span>
                         </div>
                     </div>`;
                 }).join('');
@@ -2111,7 +2147,6 @@
         document.getElementById('btnPeriodo90')?.addEventListener('click', () => setPeriodo(90));
 
         // CRUD Productos
-        const productoModal = new bootstrap.Modal(document.getElementById('productoModal'));
         
         document.getElementById('productoModal').addEventListener('shown.bs.modal', () => {
             if (!document.getElementById('productoId').value) {
@@ -2122,37 +2157,43 @@
         });
 
         document.getElementById('guardarProductoBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('guardarProductoBtn');
             const form = document.getElementById('productoForm');
             if (!form.checkValidity()) { form.reportValidity(); return; }
 
+            // Loading state
+            const originalBtnText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+
             let codigo = document.getElementById('productoCodigo').value.trim();
+            const id = document.getElementById('productoId').value;
             
-            // Si no hay código, generar uno automático
-            if (!codigo) {
-                const snap = await db.collection('productos').get();
-                const maxCodigo = snap.docs
-                    .map(d => d.data().codigo)
-                    .filter(c => c && c.startsWith('PROD-'))
-                    .map(c => parseInt(c.replace('PROD-', '')))
-                    .filter(n => !isNaN(n));
-                const maxNum = maxCodigo.length ? Math.max(...maxCodigo) : 0;
-                codigo = `PROD-${String(maxNum + 1).padStart(4, '0')}`;
-            }
-
-            const data = {
-                codigo: codigo,
-                nombre: document.getElementById('productoNombre').value,
-                cantidad: Number(document.getElementById('productoCantidad').value) || 0,
-                ubicacion: document.getElementById('productoUbicacion').value,
-                stockMinimo: Number(document.getElementById('productoStockMin').value) || 5,
-                marca: document.getElementById('productoMarca').value,
-                proveedor: document.getElementById('productoProveedor').value,
-                notas: document.getElementById('productoNotas').value,
-                categoria: document.getElementById('productoCategoria').value
-            };
-
             try {
-                const id = document.getElementById('productoId').value;
+                // Si no hay código, generar uno automático
+                if (!codigo) {
+                    const snap = await db.collection('productos').get();
+                    const maxCodigo = snap.docs
+                        .map(d => d.data().codigo)
+                        .filter(c => c && c.startsWith('PROD-'))
+                        .map(c => parseInt(c.replace('PROD-', '')))
+                        .filter(n => !isNaN(n));
+                    const maxNum = maxCodigo.length ? Math.max(...maxCodigo) : 0;
+                    codigo = `PROD-${String(maxNum + 1).padStart(4, '0')}`;
+                }
+
+                const data = {
+                    codigo: codigo,
+                    nombre: document.getElementById('productoNombre').value,
+                    cantidad: Number(document.getElementById('productoCantidad').value) || 0,
+                    ubicacion: document.getElementById('productoUbicacion').value,
+                    stockMinimo: Number(document.getElementById('productoStockMin').value) || 5,
+                    marca: document.getElementById('productoMarca').value,
+                    proveedor: document.getElementById('productoProveedor').value,
+                    notas: document.getElementById('productoNotas').value,
+                    categoria: document.getElementById('productoCategoria').value
+                };
+
                 data.fechaEdicion = firebase.firestore.FieldValue.serverTimestamp();
                 data.usuarioEdicion = currentUser.email;
                 
@@ -2174,10 +2215,15 @@
                 } else {
                     data.fechaCreacion = firebase.firestore.FieldValue.serverTimestamp();
                     data.usuarioCreacion = currentUser.email;
+                    
                     const existing = await db.collection('productos').where('codigo', '==', data.codigo).get();
-                    if (!existing.empty) { showToast('Ya existe un producto con ese código', 'error'); return; }
+                    if (!existing.empty) { 
+                        showToast('Ya existe un producto con ese código', 'error'); 
+                        throw new Error('Código duplicado'); 
+                    }
+                    
                     const nuevoDoc = await db.collection('productos').add(data);
-                    // Guardar historial de creación
+                    // Guardar historial de creación (detallado)
                     await db.collection('historialEdiciones').add({
                         productoId: nuevoDoc.id,
                         productoNombre: data.nombre,
@@ -2186,10 +2232,32 @@
                         usuario: currentUser.email,
                         fecha: firebase.firestore.FieldValue.serverTimestamp()
                     });
+                    
+                    // Registrar en MOVIMIENTOS generales
+                    await db.collection('movimientos').add({
+                        productoId: nuevoDoc.id,
+                        productoNombre: data.nombre,
+                        tipo: 'creacion',
+                        cantidad: data.cantidad,
+                        nota: 'Registro inicial por creación de producto',
+                        usuario: currentUser.email,
+                        fecha: firebase.firestore.FieldValue.serverTimestamp()
+                    });
                 }
-                productoModal.hide();
+
+                // Éxito: Limpiar, cerrar y notificar
+                form.reset();
+                productoModal.hide(); 
+                
                 showToast(id ? 'Producto actualizado' : 'Producto creado', 'success');
-            } catch (err) { showToast('Error: ' + err.message, 'error'); }
+            } catch (err) { 
+                if (err.message !== 'Código duplicado') {
+                    showToast('Error: ' + err.message, 'error'); 
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalBtnText;
+            }
         });
 
         async function editarProducto(id) {
@@ -2281,7 +2349,7 @@
             );
         }
 
-        const historialModal = new bootstrap.Modal(document.getElementById('historialModal'));
+
 
         async function verHistorial(productoId) {
             const btn = document.querySelector(`.ver-historial[data-id="${productoId}"]`);
@@ -2302,8 +2370,9 @@
                 tbody.innerHTML = snapshot.docs.map(doc => {
                     const m = doc.data();
                     const fecha = m.fecha ? new Date(m.fecha.seconds * 1000).toLocaleString('es-AR') : '';
+                    const typeLabel = m.tipo === 'creacion' ? 'creación' : m.tipo;
                     return `<tr>
-                        <td><span class="movement-badge ${m.tipo === 'entrada' ? 'movement-entrada' : 'movement-salida'}">${m.tipo}</span></td>
+                        <td><span class="movement-badge movement-${m.tipo}">${typeLabel}</span></td>
                         <td>${m.cantidad}</td>
                         <td><small>${fecha}</small></td>
                         <td><small>${m.usuario?.split('@')[0] || ''}</small></td>
@@ -2313,8 +2382,6 @@
             historialModal.show();
         }
 
-        // Movimientos
-        const movimientoModal = new bootstrap.Modal(document.getElementById('movimientoModal'));
         let productoPreseleccionado = null;
 
         // ── Custom dropdown sin datalist (inmune a acentos del browser) ──
@@ -2322,10 +2389,13 @@
         const dropdown       = document.getElementById('productosDropdown');
         const hiddenId       = document.getElementById('movimientoProducto');
 
-        function abrirDropdown(lista) {
+        function abrirDropdown(lista, query = '') {
             if (!lista.length) { dropdown.style.display = 'none'; return; }
             dropdown.innerHTML = lista.map(p => {
                 const stockColor = p.cantidad === 0 ? 'var(--danger)' : p.cantidad < p.stockMinimo ? 'var(--warning)' : 'var(--success)';
+                const highlightedNombre = query ? SearchEngine.highlightTerms(p.nombre, query) : p.nombre;
+                const highlightedCodigo = query ? SearchEngine.highlightTerms(p.codigo || '', query) : (p.codigo || '');
+                
                 return `<div class="prod-opt" data-id="${p.id}" style="
                     padding:0.65rem 1rem;
                     cursor:pointer;
@@ -2335,7 +2405,7 @@
                     border-bottom:1px solid #f1f5f9;
                     font-size:0.9rem;
                 ">
-                    <span><strong style="color:var(--text-muted);font-size:0.78rem;">${p.codigo || ''}</strong> ${p.nombre}</span>
+                    <span><strong style="color:var(--text-muted);font-size:0.78rem;">${highlightedCodigo}</strong> ${highlightedNombre}</span>
                     <span style="font-weight:700;color:${stockColor};margin-left:0.5rem;">${p.cantidad}</span>
                 </div>`;
             }).join('');
@@ -2357,22 +2427,20 @@
         }
 
         buscarInput.addEventListener('input', (e) => {
-            const q = norm(e.target.value);
+            const q = e.target.value;
             hiddenId.value = '';
             mostrarStockIndicador(null);
-            if (!q) { abrirDropdown(productos.slice(0, 30)); return; }
-            const matches = productos.filter(p =>
-                norm(p.nombre).includes(q) || norm(p.codigo).includes(q)
-            ).slice(0, 30);
-            abrirDropdown(matches);
+            if (!q.trim()) { abrirDropdown(productos.slice(0, 30)); return; }
+            const matches = SearchEngine.performLocalSearch(productos, q).slice(0, 30);
+            abrirDropdown(matches, q);
         });
 
         buscarInput.addEventListener('focus', () => {
-            const q = norm(buscarInput.value);
-            const lista = q
-                ? productos.filter(p => norm(p.nombre).includes(q) || norm(p.codigo).includes(q)).slice(0, 30)
+            const q = buscarInput.value;
+            const lista = q.trim()
+                ? SearchEngine.performLocalSearch(productos, q).slice(0, 30)
                 : productos.slice(0, 30);
-            abrirDropdown(lista);
+            abrirDropdown(lista, q);
         });
 
         buscarInput.addEventListener('blur', () => {
