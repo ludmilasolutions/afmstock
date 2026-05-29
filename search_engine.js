@@ -122,9 +122,16 @@ window.SearchEngine = {
             return { ...prod, _score: score };
         }).filter(r => r !== null);
 
+        // Ordenar por relevancia (puntuación decreciente)
         scoredResults.sort((a, b) => b._score - a._score);
 
-        return scoredResults.slice(0, limit);
+        // Limitar a los mejores resultados
+        const topResults = scoredResults.slice(0, limit);
+
+        // Ordenar alfabéticamente los mejores resultados por nombre
+        topResults.sort((a, b) => (a.nombre || '').trim().localeCompare((b.nombre || '').trim(), 'es', { sensitivity: 'base' }));
+
+        return topResults;
     },
 
     /**

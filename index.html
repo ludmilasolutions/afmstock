@@ -441,6 +441,10 @@
         .stock-ok { background: var(--success-light); color: var(--success); }
         .stock-low { background: var(--warning-light); color: var(--warning); }
         .stock-critical { background: var(--danger-light); color: var(--danger); }
+        .bg-success-light { background-color: var(--success-light) !important; }
+        .bg-danger-light { background-color: var(--danger-light) !important; }
+        .bg-warning-light { background-color: var(--warning-light) !important; }
+        .bg-primary-light { background-color: rgba(99,102,241,0.1) !important; }
 
         /* Movement Types */
         .movement-badge {
@@ -992,7 +996,6 @@
             <button class="sidebar-item" data-section="productos"><i class="bi bi-boxes"></i> Productos</button>
             <button class="sidebar-item" data-section="movimientos"><i class="bi bi-arrow-left-right"></i> Movimientos</button>
             <div class="sidebar-nav-label">Análisis</div>
-            <button class="sidebar-item" data-section="alertas"><i class="bi bi-exclamation-triangle"></i> Stock Bajo</button>
             <button class="sidebar-item" data-section="reportes"><i class="bi bi-graph-up"></i> Reportes</button>
             <div class="sidebar-nav-label">Herramientas</div>
             <a class="sidebar-item" href="importar.html" target="_blank"><i class="bi bi-upload"></i> Importar Stock</a>
@@ -1022,7 +1025,7 @@
                 <div class="p-3">
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <div class="stat-card">
+                            <div class="stat-card" style="cursor: pointer;" onclick="showSection('productos')">
                                 <div class="stat-icon primary"><i class="bi bi-boxes"></i></div>
                                 <div>
                                     <div class="stat-label">Productos</div>
@@ -1031,7 +1034,7 @@
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="stat-card">
+                            <div class="stat-card" style="cursor: pointer;" onclick="showSection('reportes')">
                                 <div class="stat-icon danger"><i class="bi bi-exclamation-triangle"></i></div>
                                 <div>
                                     <div class="stat-label">Stock Bajo</div>
@@ -1079,6 +1082,24 @@
                             <div class="qa-icon"><i class="bi bi-graph-up"></i></div>
                             Reporte
                         </button>
+                    </div>
+
+                    <div class="section-header">
+                        <span class="section-title"><i class="bi bi-sticky-fill text-warning me-1"></i>Borrador de Movimientos (¿Te olvidaste de registrar algo?)</span>
+                    </div>
+                    <div class="card mb-3 shadow-sm border-warning" style="border-left: 4px solid var(--warning) !important;">
+                        <div class="card-body p-3">
+                            <div class="input-group mb-3">
+                                <button class="btn btn-outline-warning text-warning" id="btnDictarNotaRapida" title="Dictar por voz" style="border: 1px solid rgba(217,119,6,0.3); background: rgba(217,119,6,0.02);">
+                                    <i class="bi bi-mic-fill"></i>
+                                </button>
+                                <input type="text" id="inputNotaRapida" class="form-control" placeholder="Ej: Traje 10 destornilladores, me llevé 2 teflones..." autocomplete="off">
+                                <button class="btn btn-warning fw-bold px-3" id="btnAgregarNotaRapida"><i class="bi bi-plus-lg me-1"></i>Anotar</button>
+                            </div>
+                            <div id="listaNotasRapidas" class="d-flex flex-column gap-2" style="max-height: 350px; overflow-y: auto;">
+                                <!-- Notas rápidas dinámicas -->
+                            </div>
+                        </div>
                     </div>
 
                     <div class="section-header">
@@ -1130,14 +1151,23 @@
 
             <!-- Movimientos -->
             <section id="movimientosSection" style="display:none;" class="fade-in">
-                <div class="search-box">
+                <div class="search-box mb-2">
                     <i class="bi bi-search text-muted"></i>
-                    <input type="text" id="searchMovimientos" placeholder="Buscar por producto...">
+                    <input type="text" id="searchMovimientos" placeholder="Buscar por producto..." autocomplete="off">
                 </div>
+                
+                <div class="px-3 mb-2">
+                    <div class="filter-chips" id="movimientoTipoChips">
+                        <button class="chip active" data-tipo="">Todos</button>
+                        <button class="chip" data-tipo="entrada"><i class="bi bi-arrow-down-circle-fill text-success me-1"></i>Entradas</button>
+                        <button class="chip" data-tipo="salida"><i class="bi bi-arrow-up-circle-fill text-danger me-1"></i>Salidas</button>
+                    </div>
+                </div>
+
                 <div class="px-3 pb-3">
                 <div class="table-container">
                     <table class="table" id="movimientosTable">
-                        <thead><tr><th>Producto</th><th>Tipo</th><th>Cant.</th><th>Nota</th><th>Fecha</th><th>Usuario</th></tr></thead>
+                        <thead><tr><th>Producto</th><th>Tipo</th><th>Cant.</th><th>Nota</th><th>Fecha</th><th>Usuario</th><th style="width:70px; text-align:center;">Revertir</th></tr></thead>
                         <tbody></tbody>
                     </table>
                     <div id="movimientosCards" style="padding: 0.5rem 0;"></div>
@@ -1149,28 +1179,6 @@
                 </div>
             </section>
 
-            <!-- Alertas -->
-            <section id="alertasSection" style="display:none;" class="fade-in">
-                <div class="p-3">
-                    <div class="d-flex align-items-center gap-2 mb-3 p-3" style="background:var(--warning-light);border-radius:var(--radius);border:1px solid rgba(217,119,6,0.2);">
-                        <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
-                        <div>
-                            <div style="font-size:0.85rem;font-weight:700;color:var(--warning);">Atención requerida</div>
-                            <div style="font-size:0.75rem;color:var(--text-muted);">Productos por debajo del stock mínimo</div>
-                        </div>
-                    </div>
-                    <div class="table-container">
-                        <table class="table" id="alertasTable">
-                            <thead><tr><th>Producto</th><th>Actual</th><th>Mínimo</th><th>Faltante</th><th>Acción</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                        <div class="empty-state" id="sinAlertas" style="display:none;">
-                            <i class="bi bi-check-circle-fill" style="color:var(--success);opacity:1;font-size:3rem;"></i>
-                            <p style="margin-top:0.75rem;font-weight:600;color:var(--success);">¡Todo el stock está OK!</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
             <!-- Reportes -->
             <section id="reportesSection" style="display:none;" class="fade-in">
@@ -1195,6 +1203,7 @@
                                 <button class="btn btn-sm btn-outline-secondary" id="btnPeriodo7">7 días</button>
                                 <button class="btn btn-sm btn-outline-secondary" id="btnPeriodo30">30 días</button>
                                 <button class="btn btn-sm btn-outline-secondary" id="btnPeriodo90">90 días</button>
+                                <button class="btn btn-sm btn-outline-secondary" id="btnPeriodoTodo">Desde siempre</button>
                                 <button class="btn btn-primary btn-sm ms-auto" id="filtrarReporteBtn"><i class="bi bi-funnel"></i> Filtrar</button>
                             </div>
                         </div>
@@ -1202,7 +1211,7 @@
 
                     <!-- KPIs -->
                     <div class="row g-2 mb-3">
-                        <div class="col-6">
+                        <div class="col-6 col-lg-3">
                             <div class="stat-card">
                                 <div class="stat-icon success"><i class="bi bi-arrow-down-circle-fill"></i></div>
                                 <div>
@@ -1211,12 +1220,31 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-6">
+                        <div class="col-6 col-lg-3">
                             <div class="stat-card">
                                 <div class="stat-icon danger"><i class="bi bi-arrow-up-circle-fill"></i></div>
                                 <div>
                                     <div class="stat-label">Salidas</div>
                                     <div class="stat-value" id="reporteSalidas">0</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="stat-card">
+                                <div class="stat-icon primary" style="background:rgba(99,102,241,0.1);color:var(--primary);"><i class="bi bi-star-fill"></i></div>
+                                <div>
+                                    <div class="stat-label">Más Rotado</div>
+                                    <div class="stat-value" id="reporteProductoEstrellaCant" style="font-size:1.4rem;">0</div>
+                                    <div class="stat-label text-truncate" id="reporteProductoEstrellaName" style="max-width:110px;font-size:0.68rem;font-weight:700;color:var(--primary);" title="—">—</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="stat-card">
+                                <div class="stat-icon warning" style="background:var(--warning-light);color:var(--warning);"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                                <div>
+                                    <div class="stat-label">Faltantes Críticos</div>
+                                    <div class="stat-value" id="reporteFaltantes">0</div>
                                 </div>
                             </div>
                         </div>
@@ -1232,6 +1260,16 @@
                         </div>
                     </div>
 
+                    <!-- Gráfico de mayor rotación -->
+                    <div class="chart-wrapper mb-3">
+                        <div class="chart-header">
+                            <span class="chart-title"><i class="bi bi-fire me-1"></i>Top 5 Productos de Mayor Rotación</span>
+                        </div>
+                        <div class="chart-container" style="height:240px;">
+                            <canvas id="chartTopRotacion"></canvas>
+                        </div>
+                    </div>
+
                     <!-- Gráfico donut -->
                     <div class="chart-wrapper mb-3">
                         <div class="chart-header">
@@ -1239,6 +1277,62 @@
                         </div>
                         <div class="chart-container" style="height:220px; display:flex; align-items:center; justify-content:center;">
                             <canvas id="chartDonut" style="max-width:220px;"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Planilla de Reposición y Compra Masiva -->
+                    <div class="chart-wrapper mb-3">
+                        <div class="chart-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <span class="chart-title"><i class="bi bi-lightning-charge-fill text-warning me-1"></i>Asistente de Reposición y Compra Masiva</span>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-xs btn-outline-primary" id="btnActualizarTodosMinimos" style="font-size:0.75rem;padding:0.25rem 0.5rem;font-weight:600;"><i class="bi bi-gear-fill me-1"></i>Optimizar Mínimos (Lote)</button>
+                                <span class="badge bg-warning-light text-warning" style="font-weight:700;font-size:0.7rem;letter-spacing:0.5px;text-transform:uppercase;" id="recomendacionesCount">0 sugerencias</span>
+                            </div>
+                        </div>
+                        <div class="p-3">
+                            <!-- Acciones de Reposición (Colocadas arriba de la tabla) -->
+                            <div class="d-flex flex-wrap gap-2 mb-3" id="reposicionAcciones" style="display: none !important;">
+                                <button class="btn btn-sm btn-success" id="btnExportarPedidoText">
+                                    <i class="bi bi-whatsapp me-1"></i>Enviar Pedido (WhatsApp)
+                                </button>
+                                <button class="btn btn-sm btn-outline-info text-info" id="btnToggleListaCopiar" style="background:rgba(139,213,202,0.1); border:1px solid rgba(139,213,202,0.25);">
+                                    <i class="bi bi-clipboard me-1"></i>Ver Lista para Copiar
+                                </button>
+                            </div>
+
+                            <!-- Panel de Copiar Lista (Texto Plano) -->
+                            <div id="listaCopiarPanel" class="mb-3 p-3 rounded" style="display: none; background: #1e1e2e; border: 1px solid var(--border);">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="text-white fw-bold" style="font-size:0.85rem;"><i class="bi bi-file-text me-1 text-info"></i>Texto Plano del Pedido</span>
+                                    <button class="btn btn-xs btn-outline-info text-info" id="btnCopiarListaTexto" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; background:rgba(139,213,202,0.15); border:none;">
+                                        <i class="bi bi-clipboard me-1"></i>Copiar
+                                    </button>
+                                </div>
+                                <pre id="listaCopiarTexto" class="text-white mb-0 font-monospace" style="font-size:0.8rem; white-space: pre-wrap; max-height:160px; overflow-y:auto; line-height: 1.4; color: #a6adc8 !important;"></pre>
+                            </div>
+
+                            <div class="table-container">
+                                <div class="empty-state" id="sinSugerencias" style="display: block;">
+                                    <i class="bi bi-check-circle-fill text-success" style="font-size: 2.5rem; opacity: 0.85;"></i>
+                                    <p class="mt-2 mb-0 fw-semibold text-muted" style="font-size:0.85rem;">No hay productos sugeridos para reposición.</p>
+                                </div>
+                                <table class="table mb-0 align-middle" id="reposicionTable" style="display: none;">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 40px; text-align: center;">
+                                                <input type="checkbox" id="selectAllReposicion" checked>
+                                            </th>
+                                            <th>Producto</th>
+                                            <th style="text-align: center;">Stock</th>
+                                            <th style="text-align: center;">Mín.</th>
+                                            <th style="text-align: center;">Sug. (Ventas)</th>
+                                            <th style="text-align: center;">Movs (Período)</th>
+                                            <th style="text-align: center; width: 90px;">Pedir</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="reposicionSugeridaList"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
 
@@ -1271,7 +1365,7 @@
             <button class="bottom-nav-item active" data-section="inicio"><i class="bi bi-house"></i><span>Inicio</span></button>
             <button class="bottom-nav-item" data-section="productos"><i class="bi bi-boxes"></i><span>Productos</span></button>
             <button class="bottom-nav-item" data-section="movimientos"><i class="bi bi-arrow-left-right"></i><span>Movimientos</span></button>
-            <button class="bottom-nav-item" data-section="alertas"><i class="bi bi-exclamation-triangle"></i><span>Alertas</span></button>
+            <button class="bottom-nav-item" data-section="reportes"><i class="bi bi-graph-up"></i><span>Reportes</span></button>
         </nav>
 
         <!-- FAB -->
@@ -1456,7 +1550,70 @@
         </div>
     </div>
 
-    <!-- Install Prompt -->
+    <!-- Modal Procesar Nota Rápida -->
+    <div class="modal fade" id="procesarNotaModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-sticky-fill text-warning me-1"></i>Procesar Borrador</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="p-3 mb-3 bg-light rounded border border-1 border-warning">
+                        <small class="text-muted d-block fw-bold mb-1" style="font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Texto del Recordatorio</small>
+                        <p class="mb-0 fw-semibold text-dark font-monospace" id="procesarNotaTextoOriginal" style="font-size:0.9rem;"></p>
+                    </div>
+                    <form id="procesarNotaForm">
+                        <input type="hidden" id="procesarNotaId">
+                        <div class="mb-3">
+                            <label class="form-label">Tipo de Movimiento *</label>
+                            <select class="form-select" id="procesarNotaTipo" required>
+                                <option value="entrada">Entrada (+)</option>
+                                <option value="salida">Salida (-)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Producto *</label>
+                            <div style="position:relative;">
+                                <input type="text" class="form-control" id="procesarNotaBuscarProducto" placeholder="Buscar producto..." autocomplete="off" required>
+                                <input type="hidden" id="procesarNotaProductoId">
+                                <div id="procesarNotaDropdown" style="
+                                    display:none;
+                                    position:absolute;
+                                    top:100%; left:0; right:0;
+                                    background:var(--surface);
+                                    border:2px solid var(--primary);
+                                    border-top:none;
+                                    border-radius:0 0 0.75rem 0.75rem;
+                                    max-height:200px;
+                                    overflow-y:auto;
+                                    z-index:9999;
+                                    box-shadow:0 8px 20px rgba(0,0,0,0.12);
+                                "></div>
+                            </div>
+                            <div class="stock-indicator mt-2" id="procesarNotaStockIndicator">
+                                <i class="bi bi-boxes text-primary"></i>
+                                <span>Stock actual: <strong id="procesarNotaStockActual">0</strong></span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Cantidad *</label>
+                            <input type="number" class="form-control" id="procesarNotaCantidad" min="1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nota de Registro</label>
+                            <input type="text" class="form-control" id="procesarNotaMotivo" placeholder="Ej: Venta local, compra distribuidor, etc.">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success fw-bold" id="btnGuardarProcesarNota">Confirmar y Archivar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="install-prompt" id="installPrompt">
         <i class="bi bi-download fs-4"></i>
         <div class="flex-grow-1">
@@ -1495,7 +1652,11 @@
         let movimientos = [];
         let unsubscribeProducts = null;
         let unsubscribeMovements = null;
+        let unsubscribeBorradores = null;
+        let borradores = [];
         let currentCatFilter = '';
+        let cantidadPreseleccionada = null;
+        let notaPreseleccionada = '';
 
         // ── Normalizar texto (quita acentos, minúsculas) ──────────────────
         function norm(str) {
@@ -1569,7 +1730,6 @@
             inicio: document.getElementById('inicioSection'),
             productos: document.getElementById('productosSection'),
             movimientos: document.getElementById('movimientosSection'),
-            alertas: document.getElementById('alertasSection'),
             reportes: document.getElementById('reportesSection')
         };
 
@@ -1577,7 +1737,6 @@
             inicio: 'Inicio',
             productos: 'Productos',
             movimientos: 'Movimientos',
-            alertas: 'Stock Bajo',
             reportes: 'Reportes'
         };
 
@@ -1620,6 +1779,7 @@
                 mainApp.style.display = 'none';
                 if (unsubscribeProducts) unsubscribeProducts();
                 if (unsubscribeMovements) unsubscribeMovements();
+                if (unsubscribeBorradores) unsubscribeBorradores();
             }
         });
 
@@ -1683,8 +1843,7 @@
 
             // Auto render charts on reportes
             if (section === 'reportes') {
-                if (!document.getElementById('fechaDesde').value) setPeriodo(30);
-                else renderReportes();
+                renderReportes();
             }
 
             sidebar.classList.remove('open');
@@ -1726,12 +1885,20 @@
         function subscribeData() {
             unsubscribeProducts = db.collection('productos').onSnapshot(snap => {
                 productos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                productos.sort((a, b) => (a.nombre || '').trim().localeCompare((b.nombre || '').trim(), 'es', { sensitivity: 'base' }));
                 renderAll();
             });
 
             unsubscribeMovements = db.collection('movimientos').orderBy('fecha', 'desc').onSnapshot(snap => {
                 movimientos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 renderAll();
+            });
+
+            unsubscribeBorradores = db.collection('borradores').orderBy('fecha', 'desc').onSnapshot(snap => {
+                borradores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderBorradores();
+            }, err => {
+                console.error("Error al suscribirse a borradores:", err);
             });
         }
 
@@ -1740,8 +1907,8 @@
             buildCategoryChips();
             renderProductos();
             renderMovimientos();
-            renderAlertas();
             renderReportes();
+            renderBorradores();
         }
 
         // Exportar a Excel
@@ -1919,11 +2086,15 @@
 
         document.getElementById('searchProductos')?.addEventListener('input', renderProductos);
 
+        let activeTipoFilter = '';
+
         function renderMovimientos() {
             const search = norm(document.getElementById('searchMovimientos')?.value || '');
-            const filtered = movimientos.filter(m => 
-                !search || norm(m.productoNombre).includes(search)
-            );
+            const filtered = movimientos.filter(m => {
+                const matchesSearch = !search || norm(m.productoNombre).includes(search);
+                const matchesTipo = !activeTipoFilter || m.tipo === activeTipoFilter;
+                return matchesSearch && matchesTipo;
+            });
 
             const tbody    = document.querySelector('#movimientosTable tbody');
             const cardsEl  = document.getElementById('movimientosCards');
@@ -1941,6 +2112,11 @@
                     const fecha = m.fecha ? new Date(m.fecha.seconds * 1000).toLocaleString('es-AR') : '';
                     const typeIcon = m.tipo === 'entrada' ? 'down' : (m.tipo === 'salida' ? 'up' : 'plus');
                     const typeLabel = m.tipo === 'creacion' ? 'creación' : m.tipo;
+                    
+                    const deleteBtn = (m.tipo === 'entrada' || m.tipo === 'salida')
+                        ? `<button class="btn btn-xs btn-outline-danger" onclick="eliminarMovimiento('${m.id}')" title="Revertir este movimiento y devolver el stock" style="padding: 0.15rem 0.35rem; font-size: 0.72rem; border-radius: 4px;"><i class="bi bi-arrow-counterclockwise"></i> Revertir</button>`
+                        : '—';
+
                     return `<tr>
                         <td><strong>${m.productoNombre || '?'}</strong></td>
                         <td><span class="movement-badge movement-${m.tipo}">
@@ -1950,6 +2126,7 @@
                         <td><small class="text-muted">${m.nota || '—'}</small></td>
                         <td><small class="text-muted">${fecha}</small></td>
                         <td><small class="text-muted">${m.usuario?.split('@')[0] || ''}</small></td>
+                        <td style="text-align: center;">${deleteBtn}</td>
                     </tr>`;
                 }).join('');
 
@@ -1963,6 +2140,11 @@
                     const esCreacion = m.tipo === 'creacion';
                     const typeIcon = esEntrada ? 'down' : (m.tipo === 'salida' ? 'up' : 'plus-lg');
                     const signo     = esEntrada ? '+' : '−';
+                    
+                    const deleteBtnMobile = (m.tipo === 'entrada' || m.tipo === 'salida')
+                        ? `<button class="btn btn-xs btn-outline-danger ms-2" onclick="eliminarMovimiento('${m.id}')" title="Revertir movimiento" style="padding: 0.1rem 0.3rem; font-size: 0.65rem; border-radius: 3px;"><i class="bi bi-arrow-counterclockwise"></i></button>`
+                        : '';
+
                     return `<div class="mov-card">
                         <div class="mov-card-icon ${m.tipo}">
                             <i class="bi bi-arrow-${typeIcon}-circle-fill"></i>
@@ -1972,8 +2154,9 @@
                             <div class="mov-card-meta">${fechaStr} ${horaStr}${usuario ? ' · ' + usuario : ''}</div>
                             ${m.nota ? `<div class="mov-nota">${m.nota}</div>` : ''}
                         </div>
-                        <div class="mov-card-right">
+                        <div class="mov-card-right d-flex align-items-center">
                             <span class="mov-card-qty ${m.tipo}">${esCreacion ? '' : signo}${m.cantidad}</span>
+                            ${deleteBtnMobile}
                         </div>
                     </div>`;
                 }).join('');
@@ -1982,37 +2165,84 @@
 
         document.getElementById('searchMovimientos')?.addEventListener('input', renderMovimientos);
 
-        function renderAlertas() {
-            const alerts = productos.filter(p => p.cantidad < p.stockMinimo);
-            const tbody = document.querySelector('#alertasTable tbody');
+        // Configuración de chips de filtro de tipo de movimiento
+        document.querySelectorAll('#movimientoTipoChips .chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('#movimientoTipoChips .chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                activeTipoFilter = chip.getAttribute('data-tipo') || '';
+                renderMovimientos();
+            });
+        });
+
+        window.eliminarMovimiento = async function(movId) {
+            const mov = movimientos.find(m => m.id === movId);
+            if (!mov) return;
             
-            if (alerts.length === 0) {
-                tbody.innerHTML = '';
-                document.getElementById('sinAlertas').style.display = 'block';
-            } else {
-                document.getElementById('sinAlertas').style.display = 'none';
-                tbody.innerHTML = alerts.map(p => {
-                    const faltante = p.stockMinimo - p.cantidad;
-                    return `<tr>
-                        <td><strong>${p.codigo}</strong><br><small>${p.nombre}</small></td>
-                        <td><span class="text-danger">${p.cantidad}</span></td>
-                        <td>${p.stockMinimo}</td>
-                        <td><span class="stock-badge stock-critical">-${faltante}</span></td>
-                        <td><button class="btn btn-success btn-sm" onclick="showEntradaProducto('${p.id}')"><i class="bi bi-plus"></i> Reponer</button></td>
-                    </tr>`;
-                }).join('');
+            const actionText = mov.tipo === 'entrada' ? `restará ${mov.cantidad} unidades del stock` : `sumará ${mov.cantidad} unidades al stock`;
+            if (!confirm(`¿Estás seguro de que deseas eliminar y revertir este movimiento?\nEsto ${actionText} de "${mov.productoNombre}".`)) {
+                return;
             }
-        }
+
+            try {
+                const prodRef = db.collection('productos').doc(mov.productoId);
+                await db.runTransaction(async (transaction) => {
+                    const prodDoc = await transaction.get(prodRef);
+                    if (!prodDoc.exists) {
+                        throw new Error("El producto ya no existe.");
+                    }
+                    
+                    const actualStock = prodDoc.data().cantidad || 0;
+                    let nuevoStock = actualStock;
+                    if (mov.tipo === 'entrada') {
+                        nuevoStock = actualStock - mov.cantidad;
+                    } else if (mov.tipo === 'salida') {
+                        nuevoStock = actualStock + mov.cantidad;
+                    }
+                    
+                    transaction.update(prodRef, { cantidad: nuevoStock });
+                    transaction.delete(db.collection('movimientos').doc(movId));
+                });
+                
+                showToast('Movimiento revertido y stock ajustado correctamente', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Error al revertir movimiento: ' + err.message, 'error');
+            }
+        };
 
         function showEntradaProducto(productoId) {
             document.getElementById('movimientoTipo').value = 'entrada';
             productoPreseleccionado = productoId;
-            new bootstrap.Modal(document.getElementById('movimientoModal')).show();
+            movimientoModal.show();
         }
+
+        function prepararReposicion(productoId, sugerido) {
+            document.getElementById('movimientoTipo').value = 'entrada';
+            productoPreseleccionado = productoId;
+            cantidadPreseleccionada = sugerido;
+            notaPreseleccionada = 'Reposición de stock sugerida por rotación';
+            movimientoModal.show();
+        }
+        window.prepararReposicion = prepararReposicion;
+
+        window.actualizarMinimoDirecto = async function(productoId, nuevoMinimo) {
+            if (!confirm(`¿Actualizar el stock mínimo de este producto a ${nuevoMinimo} unidades?`)) return;
+            try {
+                await db.collection('productos').doc(productoId).update({
+                    stockMinimo: nuevoMinimo
+                });
+                showToast('Stock mínimo actualizado correctamente', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Error al actualizar stock mínimo', 'error');
+            }
+        };
 
         // Charts
         let chartBar = null;
         let chartDonut = null;
+        let chartTopRotacion = null;
 
         function renderReportes() {
             const desde = document.getElementById('fechaDesde')?.value ? new Date(document.getElementById('fechaDesde').value) : null;
@@ -2032,6 +2262,144 @@
 
             document.getElementById('reporteEntradas').textContent = entradas;
             document.getElementById('reporteSalidas').textContent = salidas;
+
+            // --- Calcular Producto Estrella y Rotación ---
+            const salidasPorProducto = {};
+            filtered.filter(m => m.tipo === 'salida').forEach(m => {
+                if (!m.productoId) return;
+                salidasPorProducto[m.productoId] = {
+                    nombre: m.productoNombre || '?',
+                    cantidad: (salidasPorProducto[m.productoId]?.cantidad || 0) + m.cantidad
+                };
+            });
+
+            const productosOrdenadosPorSalida = Object.keys(salidasPorProducto)
+                .map(id => ({ id, ...salidasPorProducto[id] }))
+                .sort((a, b) => b.cantidad - a.cantidad);
+
+            const prodEstrella = productosOrdenadosPorSalida[0];
+            if (prodEstrella) {
+                document.getElementById('reporteProductoEstrellaCant').textContent = `${prodEstrella.cantidad} u.`;
+                document.getElementById('reporteProductoEstrellaName').textContent = prodEstrella.nombre;
+                document.getElementById('reporteProductoEstrellaName').title = prodEstrella.nombre;
+            } else {
+                document.getElementById('reporteProductoEstrellaCant').textContent = '—';
+                document.getElementById('reporteProductoEstrellaName').textContent = 'Sin salidas';
+                document.getElementById('reporteProductoEstrellaName').title = '';
+            }
+
+            // --- Calcular ventas y movimientos del período filtrado para todos los productos ---
+            let daysDiff = 30;
+            if (movimientos.length > 0) {
+                const datesSecs = movimientos.filter(m => m.fecha).map(m => m.fecha.seconds * 1000);
+                const minFechaMov = datesSecs.length > 0 ? new Date(Math.min(...datesSecs)) : new Date();
+                const calcDesde = desde || minFechaMov;
+                const calcHasta = hasta || new Date();
+                daysDiff = Math.max(1, Math.ceil((calcHasta - calcDesde) / (1000 * 60 * 60 * 24)));
+            }
+
+            const ventasPeriodoPorProducto = {};
+            const entradasPeriodoPorProducto = {};
+            const movimientosPeriodoPorProducto = {};
+
+            filtered.forEach(m => {
+                if (!m.productoId) return;
+                if (m.tipo === 'salida') {
+                    ventasPeriodoPorProducto[m.productoId] = (ventasPeriodoPorProducto[m.productoId] || 0) + m.cantidad;
+                } else if (m.tipo === 'entrada') {
+                    entradasPeriodoPorProducto[m.productoId] = (entradasPeriodoPorProducto[m.productoId] || 0) + m.cantidad;
+                }
+                movimientosPeriodoPorProducto[m.productoId] = (movimientosPeriodoPorProducto[m.productoId] || 0) + m.cantidad;
+            });
+
+            // Función para calcular stock mínimo dinámico normalizado a 30 días
+            function calcularMinimoSugerido(ventasPeriodo) {
+                const vPeriodo = ventasPeriodo || 0;
+                // Normalizamos las ventas del período a un equivalente de 30 días
+                const vEquivalent = (vPeriodo / daysDiff) * 30;
+                if (vEquivalent === 0) return 2; // Exhibición básica
+                if (vEquivalent <= 5) return 3;  // Margen de seguridad básico
+                return Math.max(3, Math.ceil(vEquivalent * 0.5)); // Cobertura de 15 días (ventas / 2)
+            }
+
+            // Calcular Faltantes Críticos ordenados por volumen total de movimientos del período
+            const faltantesCriticos = productos
+                .filter(p => p.cantidad < p.stockMinimo)
+                .sort((a, b) => {
+                    const movsA = movimientosPeriodoPorProducto[a.id] || 0;
+                    const movsB = movimientosPeriodoPorProducto[b.id] || 0;
+                    return movsB - movsA; // Mayor cantidad total de movimientos primero
+                });
+
+            document.getElementById('reporteFaltantes').textContent = faltantesCriticos.length;
+
+            // --- Recomendaciones de Reposición Inteligente (Planilla Masiva) ---
+
+            const sugerenciasContainer = document.getElementById('reposicionSugeridaList');
+            const sinSugerenciasEl = document.getElementById('sinSugerencias');
+            const recomendacionesCountEl = document.getElementById('recomendacionesCount');
+            const reposicionAccionesEl = document.getElementById('reposicionAcciones');
+            const reposicionTableEl = document.getElementById('reposicionTable');
+
+            if (faltantesCriticos.length === 0) {
+                if (sugerenciasContainer) sugerenciasContainer.innerHTML = '';
+                if (sinSugerenciasEl) sinSugerenciasEl.style.display = 'block';
+                if (reposicionTableEl) reposicionTableEl.style.display = 'none';
+                if (reposicionAccionesEl) reposicionAccionesEl.style.display = 'none';
+                if (recomendacionesCountEl) recomendacionesCountEl.textContent = '0 sugerencias';
+            } else {
+                if (sinSugerenciasEl) sinSugerenciasEl.style.display = 'none';
+                if (reposicionTableEl) reposicionTableEl.style.display = 'table';
+                if (reposicionAccionesEl) reposicionAccionesEl.style.display = 'flex';
+                if (recomendacionesCountEl) recomendacionesCountEl.textContent = `${faltantesCriticos.length} sugerencia${faltantesCriticos.length !== 1 ? 's' : ''}`;
+                
+                sugerenciasContainer.innerHTML = faltantesCriticos.map(p => {
+                    const ventas = ventasPeriodoPorProducto[p.id] || 0;
+                    const entradas = entradasPeriodoPorProducto[p.id] || 0;
+                    const totalMovs = movimientosPeriodoPorProducto[p.id] || 0;
+                    const sugeridoMin = calcularMinimoSugerido(ventas);
+                    
+                    // Cantidad sugerida a comprar: (mínimo actual o sugerido, el que sea mayor) - stock actual
+                    const targetMin = Math.max(p.stockMinimo, sugeridoMin);
+                    const deficit = targetMin - p.cantidad;
+                    
+                    // Colchón opcional de ventas de 15 días adicionales (ventas / 2)
+                    const buffer = Math.ceil(ventas * 0.5);
+                    let sugeridoComprar = deficit + buffer;
+                    
+                    // Garantizar que siempre compramos al menos el déficit básico o una cantidad sensata
+                    sugeridoComprar = Math.max(sugeridoComprar, targetMin * 2 - p.cantidad, 1);
+
+                    return `<tr>
+                        <td style="text-align: center;">
+                            <input type="checkbox" class="reposicion-select-item" data-id="${p.id}" data-nombre="${p.nombre}" checked>
+                        </td>
+                        <td>
+                            <strong>${p.nombre}</strong><br>
+                            <small class="text-muted">${p.codigo || 'S/C'} · ${p.categoria || 'Sin Cat.'}</small>
+                        </td>
+                        <td style="text-align: center;">
+                            <span class="${p.cantidad === 0 ? 'text-danger fw-bold' : 'text-warning fw-bold'}">${p.cantidad}</span>
+                        </td>
+                        <td style="text-align: center;">${p.stockMinimo} u.</td>
+                        <td style="text-align: center;">
+                            <span class="badge ${p.stockMinimo !== sugeridoMin ? 'bg-primary-light text-primary' : 'bg-light text-secondary'}" style="font-size:0.75rem; border-radius:4px; padding:0.25rem 0.5rem; font-weight:600;">
+                                ${sugeridoMin} u.
+                                ${p.stockMinimo !== sugeridoMin ? `<i class="bi bi-arrow-left-right ms-1 cursor-pointer" onclick="actualizarMinimoDirecto('${p.id}', ${sugeridoMin})" style="font-size:0.75rem;" title="Aplicar mínimo sugerido"></i>` : ''}
+                            </span>
+                        </td>
+                        <td style="text-align: center;">
+                            <span class="badge bg-light text-dark font-monospace" style="cursor: help;" title="Entradas: ${entradas} u. / Salidas: ${ventas} u.">
+                                ${totalMovs} u.
+                            </span>
+                        </td>
+                        <td style="text-align: center;">
+                            <input type="number" class="form-control form-control-sm text-center reposicion-qty-input font-monospace fw-bold" style="width: 75px; margin: 0 auto; border: 1px solid var(--border);" value="${sugeridoComprar}" min="1" data-id="${p.id}">
+                        </td>
+                    </tr>`;
+                }).join('');
+                actualizarListaCopiarTexto();
+            }
 
             // Tabla detalle
             const tbody = document.querySelector('#reporteTable tbody');
@@ -2104,6 +2472,45 @@
                 });
             }
 
+            // Gráfico de Mayor Rotación (Top 5 Productos)
+            const ctxTopRotacion = document.getElementById('chartTopRotacion')?.getContext('2d');
+            if (ctxTopRotacion) {
+                if (chartTopRotacion) chartTopRotacion.destroy();
+                
+                const top5 = productosOrdenadosPorSalida.slice(0, 5);
+                const labelsTop = top5.map(p => p.nombre.length > 20 ? p.nombre.substring(0, 20) + '...' : p.nombre);
+                const dataTop = top5.map(p => p.cantidad);
+
+                chartTopRotacion = new Chart(ctxTopRotacion, {
+                    type: 'bar',
+                    data: {
+                        labels: labelsTop.length ? labelsTop : ['Sin datos'],
+                        datasets: [{
+                            label: 'Unidades Despachadas',
+                            data: dataTop.length ? dataTop : [0],
+                            backgroundColor: 'rgba(79, 70, 229, 0.75)',
+                            borderColor: 'rgb(79, 70, 229)',
+                            borderWidth: 1,
+                            borderRadius: 6,
+                            borderSkipped: false
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { callbacks: { label: (context) => ` ${context.raw} unidades` } }
+                        },
+                        scales: {
+                            x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 } } },
+                            y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                        }
+                    }
+                });
+            }
+
             // Gráfico donut
             const ctxDonut = document.getElementById('chartDonut')?.getContext('2d');
             if (ctxDonut) {
@@ -2145,6 +2552,612 @@
         document.getElementById('btnPeriodo7')?.addEventListener('click', () => setPeriodo(7));
         document.getElementById('btnPeriodo30')?.addEventListener('click', () => setPeriodo(30));
         document.getElementById('btnPeriodo90')?.addEventListener('click', () => setPeriodo(90));
+        document.getElementById('btnPeriodoTodo')?.addEventListener('click', () => {
+            document.getElementById('fechaDesde').value = '';
+            document.getElementById('fechaHasta').value = '';
+            renderReportes();
+        });
+
+        // Asistente de reposición masiva listeners
+        document.getElementById('btnActualizarTodosMinimos')?.addEventListener('click', async () => {
+            if (productos.length === 0) return;
+            const now = new Date();
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(now.getDate() - 30);
+
+            // Calcular ventas
+            const ventas30dPorProducto = {};
+            movimientos.forEach(m => {
+                if (m.tipo !== 'salida' || !m.productoId || !m.fecha) return;
+                const mFecha = new Date(m.fecha.seconds * 1000);
+                if (mFecha >= thirtyDaysAgo) {
+                    ventas30dPorProducto[m.productoId] = (ventas30dPorProducto[m.productoId] || 0) + m.cantidad;
+                }
+            });
+
+            if (!confirm('¿Estás seguro de que quieres optimizar el stock mínimo de TODOS los productos basados en las ventas de los últimos 30 días?')) {
+                return;
+            }
+
+            const batch = db.batch();
+            let updatesCount = 0;
+
+            productos.forEach(p => {
+                const ventas = ventas30dPorProducto[p.id] || 0;
+                let sugeridoMin = 2; // 0 ventas -> 2 unidades
+                if (ventas > 0 && ventas <= 5) {
+                    sugeridoMin = 3;
+                } else if (ventas > 5) {
+                    sugeridoMin = Math.max(3, Math.ceil(ventas * 0.5));
+                }
+
+                if (p.stockMinimo !== sugeridoMin) {
+                    const ref = db.collection('productos').doc(p.id);
+                    batch.update(ref, { stockMinimo: sugeridoMin });
+                    updatesCount++;
+                }
+            });
+
+            if (updatesCount === 0) {
+                showToast('Todos los stocks mínimos ya están optimizados', 'info');
+                return;
+            }
+
+            try {
+                await batch.commit();
+                showToast(`Se optimizaron ${updatesCount} stocks mínimos correctamente`, 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Error al optimizar stocks mínimos', 'error');
+            }
+        });
+
+        document.getElementById('btnExportarPedidoText')?.addEventListener('click', () => {
+            const rows = document.querySelectorAll('.reposicion-select-item:checked');
+            if (rows.length === 0) {
+                showToast('No seleccionaste ningún producto para el pedido', 'warning');
+                return;
+            }
+
+            let text = `*PEDIDO DE REPOSICIÓN - STOCKAFM*\n`;
+            text += `Fecha: ${new Date().toLocaleDateString('es-AR')}\n`;
+            text += `-------------------------------------------\n`;
+
+            rows.forEach(row => {
+                const productId = row.getAttribute('data-id');
+                const productNombre = row.getAttribute('data-nombre');
+                const qtyInput = document.querySelector(`.reposicion-qty-input[data-id="${productId}"]`);
+                const cantidad = qtyInput ? qtyInput.value : '0';
+                text += `• ${productNombre} -> *Cantidad: ${cantidad} u.*\n`;
+            });
+
+            text += `-------------------------------------------\n`;
+            text += `Generado automáticamente desde el Asistente de StockAFM.`;
+
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Pedido copiado al portapapeles. ¡Listo para enviar!', 'success');
+                const encodedText = encodeURIComponent(text);
+                window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
+            }).catch(err => {
+                console.error('Error al copiar', err);
+                showToast('Error al copiar al portapapeles', 'error');
+            });
+        });
+
+        function actualizarListaCopiarTexto() {
+            const rows = document.querySelectorAll('.reposicion-select-item:checked');
+            const container = document.getElementById('listaCopiarTexto');
+            if (!container) return;
+
+            if (rows.length === 0) {
+                container.textContent = 'Ningún producto seleccionado para la lista.';
+                return;
+            }
+
+            let text = `*PEDIDO DE REPOSICIÓN - STOCKAFM*\n`;
+            text += `Fecha: ${new Date().toLocaleDateString('es-AR')}\n`;
+            text += `-------------------------------------------\n`;
+
+            rows.forEach(row => {
+                const productId = row.getAttribute('data-id');
+                const productNombre = row.getAttribute('data-nombre');
+                const qtyInput = document.querySelector(`.reposicion-qty-input[data-id="${productId}"]`);
+                const cantidad = qtyInput ? qtyInput.value : '0';
+                text += `• ${productNombre} -> Cantidad: ${cantidad} u.\n`;
+            });
+
+            text += `-------------------------------------------\n`;
+            text += `Generado automáticamente desde el Asistente de StockAFM.`;
+
+            container.textContent = text;
+        }
+        window.actualizarListaCopiarTexto = actualizarListaCopiarTexto;
+
+        document.getElementById('btnToggleListaCopiar')?.addEventListener('click', () => {
+            const panel = document.getElementById('listaCopiarPanel');
+            const btn = document.getElementById('btnToggleListaCopiar');
+            if (!panel || !btn) return;
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                btn.innerHTML = `<i class="bi bi-clipboard2-minus me-1"></i>Ocultar Lista`;
+                actualizarListaCopiarTexto();
+            } else {
+                panel.style.display = 'none';
+                btn.innerHTML = `<i class="bi bi-clipboard me-1"></i>Ver Lista para Copiar`;
+            }
+        });
+
+        document.getElementById('btnCopiarListaTexto')?.addEventListener('click', () => {
+            const container = document.getElementById('listaCopiarTexto');
+            if (!container) return;
+            const text = container.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Pedido copiado al portapapeles', 'success');
+                const btn = document.getElementById('btnCopiarListaTexto');
+                if (btn) {
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = `<i class="bi bi-check-lg me-1"></i>¡Copiado!`;
+                    btn.style.background = 'rgba(40,167,69,0.2)';
+                    btn.style.color = '#28a745';
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.style.background = 'rgba(139,213,202,0.15)';
+                        btn.style.color = '#89dceb';
+                    }, 2000);
+                }
+            }).catch(err => {
+                console.error(err);
+                showToast('Error al copiar texto', 'error');
+            });
+        });
+
+        document.getElementById('reportesSection')?.addEventListener('change', (e) => {
+            if (e.target && e.target.id === 'selectAllReposicion') {
+                const checked = e.target.checked;
+                const checkboxes = document.querySelectorAll('.reposicion-select-item');
+                checkboxes.forEach(cb => {
+                    cb.checked = checked;
+                });
+            }
+            if (e.target && (e.target.classList.contains('reposicion-select-item') || e.target.classList.contains('reposicion-qty-input') || e.target.id === 'selectAllReposicion')) {
+                actualizarListaCopiarTexto();
+            }
+        });
+
+        document.getElementById('reportesSection')?.addEventListener('input', (e) => {
+            if (e.target && e.target.classList.contains('reposicion-qty-input')) {
+                actualizarListaCopiarTexto();
+            }
+        });
+
+        // ── RECORDATORIOS / BORRADORES DE MOVIMIENTOS ─────────────────────
+
+        function renderBorradores() {
+            const container = document.getElementById('listaNotasRapidas');
+            if (!container) return;
+
+            if (borradores.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4 text-muted" style="font-size: 0.85rem; background: var(--bg); border-radius: 0.5rem; border: 1px dashed var(--border);">
+                        <i class="bi bi-sticky text-muted d-block fs-3 opacity-50 mb-2"></i>
+                        No hay recordatorios pendientes. ¡Buen trabajo!
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = borradores.map(doc => {
+                const fecha = doc.fecha ? new Date(doc.fecha.seconds * 1000) : new Date();
+                const haceCuanto = calcularHaceCuanto(fecha);
+                const usuario = doc.usuario ? doc.usuario.split('@')[0] : 'Sistema';
+                const escapedTexto = (doc.texto || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
+
+                // Detección inteligente para previsualización y auto-procesamiento rápido
+                const textNorm = norm(doc.texto);
+                let tipo = 'salida';
+                if (textNorm.includes('traje') || textNorm.includes('compre') || textNorm.includes('ingreso') || textNorm.includes('recibi') || textNorm.includes('+') || textNorm.includes('lleg') || textNorm.includes('entr') || textNorm.includes('sum')) {
+                    tipo = 'entrada';
+                }
+                const numbers = doc.texto.match(/\b\d+\b/);
+                const cantidad = numbers ? parseInt(numbers[0], 10) : 1;
+
+                let cleanQuery = doc.texto.toLowerCase()
+                    .replace(/\b\d+\b/g, '')
+                    .replace(/(lleve|retire|saque|traje|compre|ingreso|recibi|venta|vendo|para|del|de|un|una|u|u\.|caja|cajas|paquete|paquetes|bolsa|bolsas)/g, '')
+                    .trim();
+
+                let matchedProduct = null;
+                if (cleanQuery.length > 2) {
+                    const searchResults = SearchEngine.performLocalSearch(productos, cleanQuery);
+                    if (searchResults.length > 0) {
+                        matchedProduct = searchResults[0];
+                    }
+                }
+
+                let autoProcesarHtml = '';
+                if (matchedProduct) {
+                    const icon = tipo === 'entrada' ? 'plus-circle-fill text-success' : 'minus-circle-fill text-danger';
+                    const sign = tipo === 'entrada' ? '+' : '-';
+                    autoProcesarHtml = `
+                        <div class="mt-2 p-1.5 px-2 rounded d-flex justify-content-between align-items-center" style="background:rgba(217,119,6,0.04); border:1px dashed rgba(217,119,6,0.2); font-size:0.75rem;">
+                            <span class="text-muted fw-semibold">
+                                <i class="bi bi-${icon} me-1"></i>Sugerido: <strong class="text-dark">${sign}${cantidad} u.</strong> de <strong>${matchedProduct.nombre}</strong>
+                            </span>
+                            <button class="btn btn-xs btn-warning text-dark fw-bold py-0 px-2" style="font-size:0.7rem; line-height:1.4;" onclick="ejecutarAutoProcesamiento('${doc.id}', '${matchedProduct.id}', '${tipo}', ${cantidad}, '${escapedTexto}')">
+                                <i class="bi bi-lightning-fill"></i>Aplicar
+                            </button>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="p-3 rounded border border-1 bg-white border-warning fade-in shadow-sm" style="border-left: 4px solid var(--warning) !important;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div style="min-width: 0; flex: 1;" class="me-3">
+                                <p class="mb-0 fw-semibold text-dark" style="font-size:0.9rem; line-height: 1.35;">"${doc.texto}"</p>
+                                <small class="text-muted d-block mt-1" style="font-size:0.75rem;">
+                                    <i class="bi bi-person me-1"></i>${usuario} · <i class="bi bi-clock me-1"></i>${haceCuanto}
+                                </small>
+                            </div>
+                            <div class="d-flex gap-2 flex-shrink-0">
+                                <button class="btn btn-sm btn-outline-warning text-warning fw-bold" onclick="abrirProcesarNota('${doc.id}', '${escapedTexto}')" style="font-size:0.78rem; padding:0.35rem 0.65rem; background:rgba(217,119,6,0.05); border:1px solid rgba(217,119,6,0.25);">
+                                    <i class="bi bi-gear-fill me-1"></i>Procesar
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="eliminarNotaRapida('${doc.id}')" style="font-size:0.78rem; padding:0.35rem 0.65rem; border:1px solid rgba(220,38,38,0.25);">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        ${autoProcesarHtml}
+                    </div>`;
+            }).join('');
+        }
+
+        function calcularHaceCuanto(date) {
+            const segundos = Math.floor((new Date() - date) / 1000);
+            if (segundos < 60) return 'Ahora';
+            const minutos = Math.floor(segundos / 60);
+            if (minutos < 60) return `Hace ${minutos} min${minutos !== 1 ? 's' : ''}`;
+            const horas = Math.floor(minutos / 60);
+            if (horas < 24) return `Hace ${horas} hora${horas !== 1 ? 's' : ''}`;
+            return date.toLocaleDateString('es-AR');
+        }
+
+        document.getElementById('btnAgregarNotaRapida')?.addEventListener('click', async () => {
+            const input = document.getElementById('inputNotaRapida');
+            if (!input) return;
+            const texto = input.value.trim();
+            if (!texto) {
+                showToast('Escribe algo para recordar', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('btnAgregarNotaRapida');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+
+            try {
+                const userEmail = currentUser?.email || 'admin@stockafm.com';
+                await db.collection('borradores').add({
+                    texto: texto,
+                    fecha: firebase.firestore.FieldValue.serverTimestamp(),
+                    usuario: userEmail,
+                    procesado: false
+                });
+                input.value = '';
+                showToast('Recordatorio guardado', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Error al guardar recordatorio', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        });
+
+        document.getElementById('inputNotaRapida')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('btnAgregarNotaRapida')?.click();
+            }
+        });
+
+        async function eliminarNotaRapida(id) {
+            if (!confirm('¿Estás seguro de que quieres eliminar este recordatorio?')) return;
+            try {
+                await db.collection('borradores').doc(id).delete();
+                showToast('Recordatorio eliminado', 'info');
+            } catch (err) {
+                console.error(err);
+                showToast('Error al eliminar', 'error');
+            }
+        }
+        window.eliminarNotaRapida = eliminarNotaRapida;
+
+        // Configuración de dictado por voz (Speech Recognition)
+        setTimeout(() => {
+            const micBtn = document.getElementById('btnDictarNotaRapida');
+            const noteInput = document.getElementById('inputNotaRapida');
+            
+            if (micBtn && noteInput) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (SpeechRecognition) {
+                    const recognition = new SpeechRecognition();
+                    recognition.lang = 'es-AR';
+                    recognition.interimResults = false;
+                    recognition.maxAlternatives = 1;
+
+                    let isListening = false;
+
+                    recognition.onstart = () => {
+                        isListening = true;
+                        micBtn.innerHTML = '<i class="spinner-border spinner-border-sm text-danger" style="width: 1rem; height: 1rem;"></i>';
+                        micBtn.classList.remove('btn-outline-warning', 'text-warning');
+                        micBtn.classList.add('btn-danger', 'text-white');
+                        noteInput.placeholder = "Escuchando... Hable ahora...";
+                    };
+
+                    recognition.onend = () => {
+                        isListening = false;
+                        micBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
+                        micBtn.classList.add('btn-outline-warning', 'text-warning');
+                        micBtn.classList.remove('btn-danger', 'text-white');
+                        noteInput.placeholder = "Ej: Traje 10 destornilladores, me llevé 2 teflones...";
+                    };
+
+                    recognition.onresult = (event) => {
+                        const speechResult = event.results[0][0].transcript;
+                        noteInput.value = speechResult;
+                        showToast('Voz reconocida correctamente', 'success');
+                    };
+
+                    recognition.onerror = (event) => {
+                        console.error('Speech recognition error', event.error);
+                        if (event.error !== 'no-speech') {
+                            showToast('Error al reconocer voz: ' + event.error, 'error');
+                        }
+                    };
+
+                    micBtn.addEventListener('click', () => {
+                        if (isListening) {
+                            recognition.stop();
+                        } else {
+                            recognition.start();
+                        }
+                    });
+                } else {
+                    micBtn.style.display = 'none';
+                }
+            }
+        }, 1000);
+
+        window.ejecutarAutoProcesamiento = async function(notaId, productoId, tipo, cantidad, textoOriginal) {
+            if (!confirm(`¿Aplicar procesamiento rápido?\nEsto sumará/restará ${cantidad} unidades de stock al producto detectado.`)) {
+                return;
+            }
+            try {
+                const prodRef = db.collection('productos').doc(productoId);
+                const batch = db.batch();
+                
+                const prodDoc = await prodRef.get();
+                if (!prodDoc.exists) {
+                    showToast('El producto sugerido ya no existe.', 'error');
+                    return;
+                }
+                const prodData = prodDoc.data();
+                
+                if (tipo === 'salida' && prodData.cantidad < cantidad) {
+                    showToast(`Stock insuficiente de ${prodData.nombre}. Disponible: ${prodData.cantidad}`, 'error');
+                    return;
+                }
+
+                const nuevaCantidad = tipo === 'entrada' ? (prodData.cantidad || 0) + cantidad : (prodData.cantidad || 0) - cantidad;
+                
+                batch.update(prodRef, { cantidad: nuevaCantidad });
+                batch.set(db.collection('movimientos').doc(), {
+                    productoId,
+                    productoNombre: prodData.nombre,
+                    tipo,
+                    cantidad,
+                    nota: `Procesado rápido de borrador: "${textoOriginal}"`,
+                    fecha: firebase.firestore.FieldValue.serverTimestamp(),
+                    usuario: currentUser?.email || 'admin@stockafm.com'
+                });
+                batch.delete(db.collection('borradores').doc(notaId));
+
+                await batch.commit();
+                showToast(`Se aplicó ${tipo === 'entrada' ? '+' : '-'}${cantidad} a ${prodData.nombre} correctamente`, 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Error al auto-procesar: ' + err.message, 'error');
+            }
+        };
+
+        // --- Procesamiento de Notas / Matcher Inteligente ---
+        const procesarNotaModal = new bootstrap.Modal(document.getElementById('procesarNotaModal'));
+        const procesarNotaBuscarInput = document.getElementById('procesarNotaBuscarProducto');
+        const procesarNotaDropdown = document.getElementById('procesarNotaDropdown');
+        const procesarNotaHiddenId = document.getElementById('procesarNotaProductoId');
+
+        function abrirProcesarNota(id, texto) {
+            document.getElementById('procesarNotaId').value = id;
+            document.getElementById('procesarNotaTextoOriginal').textContent = texto;
+
+            // 1. Detectar tipo (entrada/salida)
+            const textNorm = norm(texto);
+            let tipo = 'salida'; // default a salida
+            if (textNorm.includes('traje') || textNorm.includes('compre') || textNorm.includes('ingreso') || textNorm.includes('recibi') || textNorm.includes('+') || textNorm.includes('lleg') || textNorm.includes('entr') || textNorm.includes('sum')) {
+                tipo = 'entrada';
+            } else if (textNorm.includes('lleve') || textNorm.includes('retire') || textNorm.includes('saque') || textNorm.includes('vendo') || textNorm.includes('venta') || textNorm.includes('-') || textNorm.includes('sac') || textNorm.includes('rest')) {
+                tipo = 'salida';
+            }
+            document.getElementById('procesarNotaTipo').value = tipo;
+
+            // 2. Detectar cantidad
+            const numbers = texto.match(/\b\d+\b/);
+            const cantidad = numbers ? parseInt(numbers[0], 10) : 1;
+            document.getElementById('procesarNotaCantidad').value = cantidad;
+
+            // 3. Nota de registro
+            document.getElementById('procesarNotaMotivo').value = `Procesado desde borrador: "${texto}"`;
+
+            // 4. Buscar coincidencia inteligente
+            let cleanQuery = texto.toLowerCase()
+                .replace(/\b\d+\b/g, '') // quitar números
+                .replace(/(lleve|retire|saque|traje|compre|ingreso|recibi|venta|vendo|para|del|de|un|una|u|u\.|caja|cajas|paquete|paquetes|bolsa|bolsas)/g, '')
+                .trim();
+
+            let matchedProduct = null;
+            if (cleanQuery.length > 2) {
+                const searchResults = SearchEngine.performLocalSearch(productos, cleanQuery);
+                if (searchResults.length > 0) {
+                    matchedProduct = searchResults[0];
+                }
+            }
+
+            const stockInd = document.getElementById('procesarNotaStockIndicator');
+            const stockVal = document.getElementById('procesarNotaStockActual');
+
+            if (matchedProduct) {
+                procesarNotaBuscarInput.value = `${matchedProduct.codigo ? matchedProduct.codigo + ' - ' : ''}${matchedProduct.nombre}`;
+                procesarNotaHiddenId.value = matchedProduct.id;
+                stockVal.textContent = matchedProduct.cantidad || 0;
+                stockVal.className = matchedProduct.cantidad === 0 ? 'text-danger' : matchedProduct.cantidad < matchedProduct.stockMinimo ? 'text-warning' : 'text-success';
+                stockInd.classList.add('show');
+            } else {
+                procesarNotaBuscarInput.value = '';
+                procesarNotaHiddenId.value = '';
+                stockInd.classList.remove('show');
+            }
+
+            procesarNotaModal.show();
+        }
+        window.abrirProcesarNota = abrirProcesarNota;
+
+        // Custom Dropdown en Modal Procesar Nota
+        function abrirProcesarNotaDropdown(lista, query = '') {
+            if (!lista.length) { procesarNotaDropdown.style.display = 'none'; return; }
+            procesarNotaDropdown.innerHTML = lista.map(p => {
+                const stockColor = p.cantidad === 0 ? 'var(--danger)' : p.cantidad < p.stockMinimo ? 'var(--warning)' : 'var(--success)';
+                const highlightedNombre = query ? SearchEngine.highlightTerms(p.nombre, query) : p.nombre;
+                const highlightedCodigo = query ? SearchEngine.highlightTerms(p.codigo || '', query) : (p.codigo || '');
+                
+                return `<div class="prod-opt-procesar" data-id="${p.id}" style="
+                    padding:0.65rem 1rem;
+                    cursor:pointer;
+                    display:flex;
+                    justify-content:space-between;
+                    align-items:center;
+                    border-bottom:1px solid #f1f5f9;
+                    font-size:0.9rem;
+                ">
+                    <span><strong style="color:var(--text-muted);font-size:0.78rem;">${highlightedCodigo}</strong> ${highlightedNombre}</span>
+                    <span style="font-weight:700;color:${stockColor};margin-left:0.5rem;">${p.cantidad}</span>
+                </div>`;
+            }).join('');
+            procesarNotaDropdown.style.display = 'block';
+
+            procesarNotaDropdown.querySelectorAll('.prod-opt-procesar').forEach(opt => {
+                opt.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    const p = productos.find(x => x.id === opt.dataset.id);
+                    if (!p) return;
+                    procesarNotaBuscarInput.value = `${p.codigo ? p.codigo + ' - ' : ''}${p.nombre}`;
+                    procesarNotaHiddenId.value = p.id;
+                    
+                    const stockInd = document.getElementById('procesarNotaStockIndicator');
+                    const stockVal = document.getElementById('procesarNotaStockActual');
+                    stockVal.textContent = p.cantidad;
+                    stockVal.className = p.cantidad === 0 ? 'text-danger' : p.cantidad < p.stockMinimo ? 'text-warning' : 'text-success';
+                    stockInd.classList.add('show');
+                    
+                    procesarNotaDropdown.style.display = 'none';
+                });
+                opt.addEventListener('mouseover', () => opt.style.background = 'var(--bg)');
+                opt.addEventListener('mouseout',  () => opt.style.background = '');
+            });
+        }
+
+        procesarNotaBuscarInput.addEventListener('input', (e) => {
+            const q = e.target.value;
+            procesarNotaHiddenId.value = '';
+            document.getElementById('procesarNotaStockIndicator').classList.remove('show');
+            if (!q.trim()) { abrirProcesarNotaDropdown(productos.slice(0, 30)); return; }
+            const matches = SearchEngine.performLocalSearch(productos, q).slice(0, 30);
+            abrirProcesarNotaDropdown(matches, q);
+        });
+
+        procesarNotaBuscarInput.addEventListener('focus', () => {
+            const q = procesarNotaBuscarInput.value;
+            const lista = q.trim()
+                ? SearchEngine.performLocalSearch(productos, q).slice(0, 30)
+                : productos.slice(0, 30);
+            abrirProcesarNotaDropdown(lista, q);
+        });
+
+        procesarNotaBuscarInput.addEventListener('blur', () => {
+            setTimeout(() => { procesarNotaDropdown.style.display = 'none'; }, 150);
+        });
+
+        // Guardar procesamiento de nota
+        document.getElementById('btnGuardarProcesarNota')?.addEventListener('click', async () => {
+            const form = document.getElementById('procesarNotaForm');
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+
+            const productoId = procesarNotaHiddenId.value;
+            if (!productoId) { showToast('Selecciona un producto para el recordatorio', 'warning'); return; }
+
+            const notaId = document.getElementById('procesarNotaId').value;
+            const tipo = document.getElementById('procesarNotaTipo').value;
+            const cantidad = Number(document.getElementById('procesarNotaCantidad').value);
+            const motivo = document.getElementById('procesarNotaMotivo').value.trim();
+
+            const prodRef = db.collection('productos').doc(productoId);
+            const prodDoc = await prodRef.get();
+            if (!prodDoc.exists) { showToast('Producto no encontrado', 'error'); return; }
+            const prod = prodDoc.data();
+
+            if (tipo === 'salida' && prod.cantidad < cantidad) {
+                showToast(`Stock insuficiente. Disponible: ${prod.cantidad}`, 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btnGuardarProcesarNota');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Procesando...';
+
+            const nuevaCantidad = tipo === 'entrada' ? prod.cantidad + cantidad : prod.cantidad - cantidad;
+            const batch = db.batch();
+            
+            // Actualizar stock del producto
+            batch.update(prodRef, { cantidad: nuevaCantidad });
+            
+            // Registrar movimiento
+            batch.set(db.collection('movimientos').doc(), {
+                productoId,
+                productoNombre: prod.nombre,
+                tipo,
+                cantidad,
+                nota: motivo || 'Procesado desde borrador',
+                fecha: firebase.firestore.FieldValue.serverTimestamp(),
+                usuario: currentUser.email
+            });
+
+            // Borrar nota
+            batch.delete(db.collection('borradores').doc(notaId));
+
+            try {
+                await batch.commit();
+                procesarNotaModal.hide();
+                showToast(`Movimiento registrado y recordatorio archivado correctamente`, 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Error al registrar movimiento: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        });
 
         // CRUD Productos
         
@@ -2476,11 +3489,25 @@
             const tipoActual = document.getElementById('movimientoTipo').value;
             document.getElementById('movimientoForm').reset();
             document.getElementById('movimientoTipo').value = tipoActual;
+            
+            if (cantidadPreseleccionada) {
+                document.getElementById('movimientoCantidad').value = cantidadPreseleccionada;
+                cantidadPreseleccionada = null;
+            } else {
+                document.getElementById('movimientoCantidad').value = 1;
+            }
+
+            if (notaPreseleccionada) {
+                document.getElementById('movimientoNota').value = notaPreseleccionada;
+                notaPreseleccionada = '';
+            } else {
+                document.getElementById('movimientoNota').value = '';
+            }
+
             buscarInput.value = '';
             hiddenId.value = '';
             dropdown.style.display = 'none';
             mostrarStockIndicador(null);
-            document.getElementById('movimientoNota').value = '';
             renderSelectProductos();
             buscarInput.focus();
         });
