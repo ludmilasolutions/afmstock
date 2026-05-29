@@ -2873,6 +2873,102 @@
         }
         window.eliminarNotaRapida = eliminarNotaRapida;
 
+        function segmentarTextoDeVoz(texto) {
+            if (!texto) return [];
+            texto = texto.replace(/\r?\n|\r/g, ' ').replace(/\s+/g, ' ');
+            
+            // 1. Dividir por signos de puntuación o "también"
+            let partes = texto.split(/[.,;]|\btambién\b|\btambien\b/gi);
+            let partesIntermedias = [];
+            
+            // Verbos de referencia para detectar la dirección del movimiento
+            const verbosRegex = /\b(traje|compre|ingreso|recibi|recibí|llegaron|llegó|llego|entraron|entró|entro|sumar|sumé|sume|devolvieron|devolví|devolvi|lleve|llevé|retire|retiré|saque|saqué|vendo|venta|ventas|sacaron|sacó|saco|restar|resté|reste)\b/i;
+            
+            partes.forEach(parte => {
+                parte = parte.trim();
+                if (!parte) return;
+                
+                const subPartes = parte.split(/\s+y\s+/gi);
+                if (subPartes.length > 1) {
+                    let acumulado = subPartes[0];
+                    for (let i = 1; i < subPartes.length; i++) {
+                        const sub = subPartes[i].trim();
+                        const esNuevaAccion = /\b\d+\b/.test(sub) || verbosRegex.test(sub);
+                        if (esNuevaAccion) {
+                            partesIntermedias.push(acumulado.trim());
+                            acumulado = sub;
+                        } else {
+                            acumulado += " y " + sub;
+                        }
+                    }
+                    partesIntermedias.push(acumulado.trim());
+                } else {
+                    partesIntermedias.push(parte);
+                }
+            });
+            
+            // 2. Dividir por números de cantidad dentro de cada segmento (si el usuario habló de corrido)
+            let partesFinales = [];
+            partesIntermedias.forEach(p => {
+                const subSegs = segmentarPorNumeros(p);
+                partesFinales.push(...subSegs);
+            });
+            
+            // 3. Propagación del contexto (verbo/acción anterior) a segmentos sin verbo explícito
+            let ultimoVerboEncontrado = '';
+            const partesConContexto = partesFinales.map(p => {
+                p = p.trim();
+                if (!p) return '';
+                
+                const matchVerb = p.match(verbosRegex);
+                if (matchVerb) {
+                    ultimoVerboEncontrado = matchVerb[0];
+                    return p;
+                } else {
+                    if (ultimoVerboEncontrado) {
+                        const verboHeredado = ultimoVerboEncontrado.charAt(0).toUpperCase() + ultimoVerboEncontrado.slice(1).toLowerCase();
+                        return `${verboHeredado} ${p.toLowerCase()}`;
+                    }
+                    return p;
+                }
+            });
+            
+            return partesConContexto.map(p => {
+                p = p.trim();
+                if (!p) return '';
+                return p.charAt(0).toUpperCase() + p.slice(1);
+            }).filter(p => p.length > 2);
+        }
+
+        function segmentarPorNumeros(texto) {
+            // Buscamos números que actúen como cantidades (enteros separados)
+            // Evitamos números precedidos por "de" o un punto/coma decimal (ej: 1.5, 1,5)
+            // e ignoramos si están seguidos por unidades de medida típicas (litros, etc.)
+            const regexCantidad = /(?<!\bde\s|[\d.,])\b\d+\b(?![\d.,]|\s*(litros|litro|l\b|ml|gr|g\b|kg|cm|mm|pulgadas|oz|cc|v|w|a|vols|vías|vias|puntos|p\b|u\b|unidades|unidad))/gi;
+            
+            let matches = [];
+            let match;
+            while ((match = regexCantidad.exec(texto)) !== null) {
+                matches.push(match);
+            }
+            
+            if (matches.length <= 1) {
+                return [texto];
+            }
+            
+            let segmentos = [];
+            let ultimoIndice = 0;
+            
+            for (let i = 1; i < matches.length; i++) {
+                let indiceCorte = matches[i].index;
+                segmentos.push(texto.substring(ultimoIndice, indiceCorte).trim());
+                ultimoIndice = indiceCorte;
+            }
+            segmentos.push(texto.substring(ultimoIndice).trim());
+            
+            return segmentos;
+        }
+
         // Configuración de dictado por voz (Speech Recognition)
         setTimeout(() => {
             const micBtn = document.getElementById('btnDictarNotaRapida');
@@ -2883,6 +2979,7 @@
                 if (SpeechRecognition) {
                     const recognition = new SpeechRecognition();
                     recognition.lang = 'es-AR';
+                    recognition.continuous = true;
                     recognition.interimResults = false;
                     recognition.maxAlternatives = 1;
 
@@ -2893,7 +2990,7 @@
                         micBtn.innerHTML = '<i class="spinner-border spinner-border-sm text-danger" style="width: 1rem; height: 1rem;"></i>';
                         micBtn.classList.remove('btn-outline-warning', 'text-warning');
                         micBtn.classList.add('btn-danger', 'text-white');
-                        noteInput.placeholder = "Escuchando... Hable ahora...";
+                        noteInput.placeholder = "Grabando... Toque el micrófono al terminar...";
                     };
 
                     recognition.onend = () => {
@@ -2904,10 +3001,47 @@
                         noteInput.placeholder = "Ej: Traje 10 destornilladores, me llevé 2 teflones...";
                     };
 
-                    recognition.onresult = (event) => {
-                        const speechResult = event.results[0][0].transcript;
-                        noteInput.value = speechResult;
-                        showToast('Voz reconocida correctamente', 'success');
+                    recognition.onresult = async (event) => {
+                        // En modo continuo, los resultados se agregan en event.results.
+                        // Obtenemos la última transcripción acumulada.
+                        let speechResult = '';
+                        for (let i = event.resultIndex; i < event.results.length; ++i) {
+                            if (event.results[i].isFinal) {
+                                speechResult += event.results[i][0].transcript + ' ';
+                            }
+                        }
+                        
+                        speechResult = speechResult.trim();
+                        if (!speechResult) return;
+
+                        const segmentos = segmentarTextoDeVoz(speechResult);
+                        
+                        if (segmentos.length === 0) {
+                            showToast('No se detectó ningún texto claro.', 'warning');
+                            return;
+                        }
+
+                        try {
+                            const userEmail = currentUser?.email || 'admin@stockafm.com';
+                            const batch = db.batch();
+                            
+                            segmentos.forEach(texto => {
+                                const newRef = db.collection('borradores').doc();
+                                batch.set(newRef, {
+                                    texto: texto,
+                                    fecha: firebase.firestore.FieldValue.serverTimestamp(),
+                                    usuario: userEmail,
+                                    procesado: false
+                                });
+                            });
+                            
+                            await batch.commit();
+                            showToast(`🎙️ Guardados ${segmentos.length} recordatorios de voz`, 'success');
+                            noteInput.value = '';
+                        } catch (err) {
+                            console.error(err);
+                            showToast('Error al procesar el audio continuo', 'error');
+                        }
                     };
 
                     recognition.onerror = (event) => {
