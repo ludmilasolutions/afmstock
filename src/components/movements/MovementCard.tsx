@@ -65,3 +65,4 @@ export const MovementCard: React.FC<MovementCardProps> = ({ movement, onRevert }
     </div>
   );
 };
+

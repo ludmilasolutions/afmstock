@@ -52,3 +52,4 @@ export function formatNumber(val: number | string | undefined | null): string {
   const num = Number(val) || 0;
   return new Intl.NumberFormat('es-AR').format(num);
 }
+

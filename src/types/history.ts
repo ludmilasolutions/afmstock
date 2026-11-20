@@ -13,3 +13,4 @@ export interface HistorialItem {
   usuario?: string;
   fecha?: any;
 }
+

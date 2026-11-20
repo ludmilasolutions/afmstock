@@ -36,3 +36,4 @@ export async function registerWithEmail(
 export async function logoutUser(authInstance: Auth = auth): Promise<void> {
   await firebaseSignOut(authInstance);
 }
+

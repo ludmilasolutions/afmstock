@@ -115,3 +115,4 @@ export const ProductQuickAdjustModal: React.FC<ProductQuickAdjustModalProps> = (
     </Modal>
   );
 };
+

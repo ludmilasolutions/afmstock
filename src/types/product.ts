@@ -31,3 +31,4 @@ export interface StockStatus {
   colorClass: string;
   badgeClass: string;
 }
+

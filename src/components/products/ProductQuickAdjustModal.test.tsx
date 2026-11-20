@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ProductQuickAdjustModal } from './ProductQuickAdjustModal';
 import { ToastProvider } from '@/context/ToastContext';
 import { Producto } from '@/types/product';
@@ -39,12 +39,13 @@ describe('ProductQuickAdjustModal Component', () => {
 
   it('ejecuta onAdjust con la nueva cantidad y motivo', async () => {
     const handleAdjust = vi.fn().mockResolvedValue(undefined);
+    const handleClose = vi.fn();
     render(
       <ToastProvider>
         <ProductQuickAdjustModal
           product={mockProduct}
           isOpen={true}
-          onClose={vi.fn()}
+          onClose={handleClose}
           onAdjust={handleAdjust}
         />
       </ToastProvider>
@@ -59,6 +60,12 @@ describe('ProductQuickAdjustModal Component', () => {
     const submitBtn = screen.getByRole('button', { name: /Confirmar Ajuste/i });
     fireEvent.click(submitBtn);
 
-    expect(handleAdjust).toHaveBeenCalledWith('prod_99', 25, 'Inventario de fin de mes');
+    await waitFor(() => {
+      expect(handleAdjust).toHaveBeenCalledWith('prod_99', 25, 'Inventario de fin de mes');
+    });
+
+    await waitFor(() => {
+      expect(handleClose).toHaveBeenCalled();
+    });
   });
 });

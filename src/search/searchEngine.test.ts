@@ -72,3 +72,4 @@ describe('SearchEngine Tests', () => {
     expect(results.length).toBe(0);
   });
 });
+

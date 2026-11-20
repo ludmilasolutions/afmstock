@@ -10,6 +10,7 @@ import {
   where,
   onSnapshot,
   writeBatch,
+  runTransaction,
   serverTimestamp,
   Firestore,
 } from 'firebase/firestore';
@@ -186,54 +187,58 @@ export async function adjustProductStock(
   userEmail: string,
   firestoreInstance: Firestore = db
 ): Promise<void> {
-  if (isNaN(newStock) || newStock < 0) {
+  if (typeof newStock !== 'number' || isNaN(newStock) || newStock < 0) {
     throw new Error('La cantidad de stock debe ser un número mayor o igual a 0.');
   }
 
   const docRef = doc(firestoreInstance, 'productos', productoId);
-  const prodDoc = await getDoc(docRef);
-  if (!prodDoc.exists()) throw new Error('El producto no existe.');
 
-  const prodData = prodDoc.data();
-  const stockAnterior = prodData.cantidad || 0;
-  const diff = newStock - stockAnterior;
+  await runTransaction(firestoreInstance, async (transaction) => {
+    // 1. Fase de lectura atómica (todas las lecturas antes de cualquier escritura)
+    const prodDoc = await transaction.get(docRef);
+    if (!prodDoc.exists()) {
+      throw new Error('El producto no existe.');
+    }
 
-  const batch = writeBatch(firestoreInstance);
+    const prodData = prodDoc.data();
+    const stockAnterior = typeof prodData.cantidad === 'number' ? prodData.cantidad : Number(prodData.cantidad) || 0;
+    const diff = newStock - stockAnterior;
+    const prodNombre = prodData.nombre || 'Sin nombre';
 
-  batch.update(docRef, {
-    cantidad: newStock,
-    fechaEdicion: serverTimestamp(),
-    usuarioEdicion: userEmail,
-  });
+    // 2. Fase de escritura atómica
+    transaction.update(docRef, {
+      cantidad: newStock,
+      fechaEdicion: serverTimestamp(),
+      usuarioEdicion: userEmail,
+    });
 
-  // Historial de auditoría
-  const historyRef = doc(collection(firestoreInstance, 'historialEdiciones'));
-  batch.set(historyRef, {
-    productoId,
-    productoNombre: prodData.nombre,
-    tipo: 'ajuste',
-    cantidadAnterior: stockAnterior,
-    cantidadNueva: newStock,
-    motivo: motivo.trim() || 'Ajuste manual de inventario',
-    usuario: userEmail,
-    fecha: serverTimestamp(),
-  });
-
-  // Si hubo cambio de cantidad, registrar movimiento para consistencia
-  if (diff !== 0) {
-    const movRef = doc(collection(firestoreInstance, 'movimientos'));
-    batch.set(movRef, {
+    // Registro inmutable en historial de ediciones
+    const historyRef = doc(collection(firestoreInstance, 'historialEdiciones'));
+    transaction.set(historyRef, {
       productoId,
-      productoNombre: prodData.nombre,
-      tipo: diff > 0 ? 'entrada' : 'salida',
-      cantidad: Math.abs(diff),
-      nota: `Ajuste manual (${stockAnterior} → ${newStock})${motivo ? ': ' + motivo : ''}`,
+      productoNombre: prodNombre,
+      tipo: 'ajuste',
+      cantidadAnterior: stockAnterior,
+      cantidadNueva: newStock,
+      motivo: motivo.trim() || 'Ajuste manual de inventario',
       usuario: userEmail,
       fecha: serverTimestamp(),
     });
-  }
 
-  await batch.commit();
+    // Si hubo cambio de cantidad, registrar movimiento para consistencia
+    if (diff !== 0) {
+      const movRef = doc(collection(firestoreInstance, 'movimientos'));
+      transaction.set(movRef, {
+        productoId,
+        productoNombre: prodNombre,
+        tipo: diff > 0 ? 'entrada' : 'salida',
+        cantidad: Math.abs(diff),
+        nota: `Ajuste manual (${stockAnterior} → ${newStock})${motivo.trim() ? ': ' + motivo.trim() : ''}`,
+        usuario: userEmail,
+        fecha: serverTimestamp(),
+      });
+    }
+  });
 }
 
 export async function deleteProduct(productId: string, firestoreInstance: Firestore = db): Promise<void> {

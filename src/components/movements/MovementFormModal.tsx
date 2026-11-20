@@ -244,3 +244,4 @@ export const MovementFormModal: React.FC<MovementFormModalProps> = ({
     </Modal>
   );
 };
+

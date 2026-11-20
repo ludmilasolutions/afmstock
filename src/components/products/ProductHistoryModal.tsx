@@ -185,3 +185,4 @@ export const ProductHistoryModal: React.FC<ProductHistoryModalProps> = ({
     </Modal>
   );
 };
+

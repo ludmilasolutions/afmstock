@@ -139,3 +139,4 @@ VITE_USE_FIREBASE_EMULATOR=false
 
 - **Sin escrituras a producción durante tests:** La suite de pruebas utiliza mocks y emuladores aislados en memoria.
 - **Sin push ni merge automatizado:** Todo el desarrollo se encuentra confinado a la rama local `feature/react-migration`. Las ramas `main`, `cleanup/remove-tecniya` y `backup/pre-tecniya-cleanup-2026-11-19` permanecen intactas.
+

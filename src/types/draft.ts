@@ -5,3 +5,4 @@ export interface Borrador {
   usuario?: string;
   procesado?: boolean;
 }
+

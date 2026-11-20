@@ -113,3 +113,4 @@ export const MovementTable: React.FC<MovementTableProps> = ({ movements, onRever
     </div>
   );
 };
+

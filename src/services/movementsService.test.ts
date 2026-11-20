@@ -73,3 +73,4 @@ describe('MovementsService - Lógica y Mapeo Adaptativo', () => {
     expect(revertirSalida(2, 8)).toBe(10);
   });
 });
+
