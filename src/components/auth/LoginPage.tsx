@@ -3,7 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { Button } from '@/components/common/Button';
 import { Input } from '@/components/common/Input';
-import { Package, LogIn, Lock, Mail } from 'lucide-react';
+import { Package, LogIn, Lock, Mail, ShieldCheck } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const { login, register } = useAuth();
@@ -49,15 +49,18 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-radial from-slate-900 via-slate-950 to-black flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-2xl border border-slate-100 flex flex-col items-center">
         {/* Logo */}
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/30 mb-4">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 mb-4">
           <Package className="w-8 h-8" />
         </div>
 
-        <h1 className="text-2xl font-black text-slate-800 tracking-tight">StockAFM</h1>
-        <p className="text-xs text-slate-400 font-medium mb-6">Control y Consulta de Depósito</p>
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight">AFM STOCK 2.0</h1>
+        <p className="text-xs text-slate-500 font-semibold mb-6 flex items-center gap-1">
+          <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+          Control y Consulta de Depósito
+        </p>
 
         <form onSubmit={handleSubmit} className="w-full flex flex-col gap-3.5">
           <Input
@@ -93,7 +96,7 @@ export const LoginPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsRegister(!isRegister)}
-              className="text-xs text-slate-500 hover:text-indigo-600 font-medium transition-colors"
+              className="text-xs text-slate-600 hover:text-indigo-600 font-medium transition-colors cursor-pointer"
             >
               {isRegister
                 ? '¿Ya tenés cuenta? Iniciar Sesión'
@@ -105,4 +108,3 @@ export const LoginPage: React.FC = () => {
     </div>
   );
 };
-

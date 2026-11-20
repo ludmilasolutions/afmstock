@@ -109,11 +109,11 @@ export const MovementFormModal: React.FC<MovementFormModalProps> = ({
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {/* Selector de Tipo (Entrada / Salida) */}
-        <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
+        <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-2xl">
           <button
             type="button"
             onClick={() => setTipo('entrada')}
-            className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               tipo === 'entrada'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -125,9 +125,9 @@ export const MovementFormModal: React.FC<MovementFormModalProps> = ({
           <button
             type="button"
             onClick={() => setTipo('salida')}
-            className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               tipo === 'salida'
-                ? 'bg-red-600 text-white shadow-xs'
+                ? 'bg-rose-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -138,7 +138,7 @@ export const MovementFormModal: React.FC<MovementFormModalProps> = ({
 
         {/* Buscador de producto con autocomplete */}
         <div className="relative">
-          <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
             Producto *
           </label>
           <div className="relative">
@@ -153,16 +153,16 @@ export const MovementFormModal: React.FC<MovementFormModalProps> = ({
                 setIsDropdownOpen(true);
               }}
               onFocus={() => setIsDropdownOpen(true)}
-              className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-4 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+              className="w-full rounded-xl border border-slate-200 hover:border-slate-300 bg-white pl-9 pr-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 shadow-xs"
             />
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
           </div>
 
           {/* Menú desplegable */}
           {isDropdownOpen && (
-            <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl border border-slate-200 shadow-xl max-h-56 overflow-y-auto z-20 divide-y divide-slate-100">
+            <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-2xl border border-slate-200 shadow-xl max-h-56 overflow-y-auto z-20 divide-y divide-slate-100">
               {searchResults.length === 0 ? (
-                <div className="p-3 text-xs text-slate-400 text-center">
+                <div className="p-3 text-xs text-slate-500 text-center font-medium">
                   No se encontraron productos coincidentes
                 </div>
               ) : (
@@ -172,11 +172,11 @@ export const MovementFormModal: React.FC<MovementFormModalProps> = ({
                     <div
                       key={p.id}
                       onClick={() => handleSelectProduct(p)}
-                      className="p-2.5 hover:bg-slate-50 cursor-pointer flex items-center justify-between text-xs transition-colors"
+                      className="p-2.5 hover:bg-indigo-50/40 cursor-pointer flex items-center justify-between text-xs transition-colors"
                     >
                       <div className="flex flex-col pr-2">
-                        <span className="font-semibold text-slate-800">{p.nombre}</span>
-                        <span className="font-mono text-slate-400 text-[11px]">{p.codigo || 'S/C'}</span>
+                        <span className="font-semibold text-slate-900">{p.nombre}</span>
+                        <span className="font-mono text-slate-500 text-[11px] font-medium">{p.codigo || 'S/C'}</span>
                       </div>
                       <span className={`font-mono font-bold ${status.colorClass}`}>
                         Stock: {p.cantidad ?? 0}
@@ -191,15 +191,15 @@ export const MovementFormModal: React.FC<MovementFormModalProps> = ({
 
         {/* Indicador de producto seleccionado */}
         {selectedProduct && (
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
+          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 flex items-center justify-between text-xs">
             <div>
-              <span className="text-slate-500 block">Stock Disponible en Depósito:</span>
-              <strong className="text-sm font-mono text-slate-800">
+              <span className="text-slate-500 font-medium block">Stock Disponible en Depósito:</span>
+              <strong className="text-sm font-mono text-slate-900">
                 {selectedProduct.cantidad ?? 0} unidades
               </strong>
             </div>
             {tipo === 'salida' && (selectedProduct.cantidad ?? 0) <= 0 && (
-              <span className="text-red-600 font-semibold">Sin existencias para despachar</span>
+              <span className="text-rose-600 font-bold">Sin existencias para despachar</span>
             )}
           </div>
         )}
@@ -244,4 +244,3 @@ export const MovementFormModal: React.FC<MovementFormModalProps> = ({
     </Modal>
   );
 };
-

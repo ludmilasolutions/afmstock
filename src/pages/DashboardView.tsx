@@ -58,14 +58,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       />
 
       {/* Accesos rápidos de depósito */}
-      <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col gap-3">
-        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-          Acciones Frecuentes
+      <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col gap-3.5">
+        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+          Acciones Frecuentes de Depósito
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <button
             onClick={() => onOpenMovementModal('entrada')}
-            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-100/80 transition-all font-semibold text-sm gap-2"
+            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-emerald-50 hover:bg-emerald-100/90 text-emerald-900 border border-emerald-200/70 transition-all font-semibold text-sm gap-2 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer shadow-2xs"
           >
             <ArrowDownCircle className="w-6 h-6 text-emerald-600" />
             <span>Registrar Entrada</span>
@@ -73,15 +73,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <button
             onClick={() => onOpenMovementModal('salida')}
-            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-red-50 hover:bg-red-100 text-red-800 border border-red-100/80 transition-all font-semibold text-sm gap-2"
+            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-rose-50 hover:bg-rose-100/90 text-rose-900 border border-rose-200/70 transition-all font-semibold text-sm gap-2 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer shadow-2xs"
           >
-            <ArrowUpCircle className="w-6 h-6 text-red-600" />
+            <ArrowUpCircle className="w-6 h-6 text-rose-600" />
             <span>Registrar Salida</span>
           </button>
 
           <button
             onClick={() => onNavigate('productos')}
-            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-100/80 transition-all font-semibold text-sm gap-2"
+            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-indigo-50 hover:bg-indigo-100/90 text-indigo-900 border border-indigo-200/70 transition-all font-semibold text-sm gap-2 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer shadow-2xs"
           >
             <Boxes className="w-6 h-6 text-indigo-600" />
             <span>Consultar Stock</span>
@@ -89,7 +89,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <button
             onClick={onOpenProductModal}
-            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200/60 transition-all font-semibold text-sm gap-2"
+            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-900 border border-slate-200/80 transition-all font-semibold text-sm gap-2 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer shadow-2xs"
           >
             <Plus className="w-6 h-6 text-slate-600" />
             <span>Nuevo Artículo</span>
@@ -100,7 +100,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Últimos movimientos */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-800 tracking-tight">
+          <h3 className="text-sm font-bold text-slate-900 tracking-tight">
             Últimos Movimientos del Depósito
           </h3>
           <Button variant="ghost" size="sm" onClick={() => onNavigate('movimientos')}>
@@ -109,7 +109,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {recentMovements.length === 0 ? (
-          <div className="bg-white rounded-2xl p-8 border border-dashed border-slate-200 text-center text-slate-400 text-sm">
+          <div className="bg-white rounded-3xl p-8 border border-dashed border-slate-200 text-center text-slate-500 text-sm">
             No se han registrado movimientos todavía.
           </div>
         ) : (
@@ -117,7 +117,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="hidden sm:block">
               <MovementTable movements={recentMovements} onRevert={onRevertMovement} />
             </div>
-            <div className="sm:hidden flex flex-col gap-2">
+            <div className="sm:hidden flex flex-col gap-2.5">
               {recentMovements.map((m) => (
                 <MovementCard key={m.id} movement={m} onRevert={onRevertMovement} />
               ))}
@@ -128,4 +128,3 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     </div>
   );
 };
-

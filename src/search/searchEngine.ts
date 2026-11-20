@@ -40,15 +40,17 @@ export const SearchEngine = {
   },
 
   /**
-   * Búsqueda sobre colección en memoria con ponderación de relevancia
+   * Búsqueda sobre colección en memoria con ponderación de relevancia.
+   * Si no se especifica `options.limit`, devuelve TODOS los productos coincidentes sin truncamiento.
    */
   performLocalSearch(items: Producto[], query: string, options: { limit?: number } = {}): Producto[] {
-    const { limit = 100 } = options;
+    const { limit } = options;
 
     if (!query || query.trim() === '') {
-      return [...items].sort((a, b) =>
+      const sorted = [...items].sort((a, b) =>
         (a.nombre || '').trim().localeCompare((b.nombre || '').trim(), 'es', { sensitivity: 'base' })
       );
+      return (typeof limit === 'number' && limit > 0) ? sorted.slice(0, limit) : sorted;
     }
 
     const term = query.trim().toLowerCase();
@@ -133,9 +135,11 @@ export const SearchEngine = {
     // Ordenar por relevancia decreciente
     scoredResults.sort((a, b) => b.score - a.score);
 
-    const topResults = scoredResults.slice(0, limit).map((s) => s.item);
+    // Si limit está definido y es positivo, recortar; si no, retornar todos los resultados coincidentes
+    const topResults = (typeof limit === 'number' && limit > 0)
+      ? scoredResults.slice(0, limit).map((s) => s.item)
+      : scoredResults.map((s) => s.item);
 
-    // Si no hay búsqueda específica (o en empates iniciales), orden alfabético
     return topResults;
   },
 

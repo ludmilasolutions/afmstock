@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-slate-100 text-slate-800 antialiased font-sans selection:bg-indigo-500 selection:text-white;
+    @apply bg-[#F5F6FC] text-slate-800 antialiased font-sans selection:bg-indigo-600 selection:text-white;
   }
 }
 
@@ -23,4 +23,3 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
-

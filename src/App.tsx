@@ -85,8 +85,8 @@ export const App: React.FC = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
-        <Spinner size="lg" text="Iniciando StockAFM..." />
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
+        <Spinner size="lg" text="Iniciando AFM STOCK 2.0..." />
       </div>
     );
   }
@@ -188,7 +188,7 @@ export const App: React.FC = () => {
   const isLoadingData = prodLoading || movLoading || draftLoading;
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row antialiased">
+    <div className="min-h-screen bg-[#F5F6FC] flex flex-col md:flex-row antialiased selection:bg-indigo-600 selection:text-white">
       {/* Sidebar Desktop */}
       <Sidebar
         activeSection={activeSection}
@@ -206,7 +206,7 @@ export const App: React.FC = () => {
 
         <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto">
           {isLoadingData ? (
-            <div className="py-20">
+            <div className="py-24 flex items-center justify-center">
               <Spinner text="Sincronizando inventario con Firebase..." />
             </div>
           ) : (
@@ -264,7 +264,7 @@ export const App: React.FC = () => {
         </main>
       </div>
 
-      {/* Botón Flotante Móvil (FAB) */}
+      {/* Botón Flotante Móvil (FAB) con aria-label para accesibilidad (H-A11Y-04) */}
       <button
         onClick={() => {
           if (activeSection === 'productos') {
@@ -274,7 +274,8 @@ export const App: React.FC = () => {
           }
         }}
         className="md:hidden fixed bottom-20 right-4 z-40 w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-600/40 active:scale-95 transition-all"
-        title="Acción Rápida"
+        title={activeSection === 'productos' ? 'Nuevo Producto' : 'Registrar Entrada'}
+        aria-label={activeSection === 'productos' ? 'Crear nuevo producto' : 'Registrar nueva entrada de stock'}
       >
         <Plus className="w-6 h-6" />
       </button>

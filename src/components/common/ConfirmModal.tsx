@@ -29,7 +29,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onCancel} title={title} maxWidth="sm">
       <div className="flex flex-col items-center text-center py-2">
-        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${variant === 'danger' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
+        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 shadow-xs ${variant === 'danger' ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
           <AlertTriangle className="w-6 h-6" />
         </div>
         <p className="text-sm text-slate-600 mb-6 leading-relaxed">
@@ -51,4 +51,3 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     </Modal>
   );
 };
-

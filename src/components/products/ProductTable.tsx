@@ -30,42 +30,42 @@ export const ProductTable: React.FC<ProductTableProps> = ({
   onViewDetail,
 }) => {
   return (
-    <div className="w-full bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+    <div className="w-full bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs">
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm text-slate-700">
-          <thead className="bg-slate-50/75 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider select-none">
+        <table className="w-full text-left text-sm text-slate-800">
+          <thead className="bg-slate-50/80 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider select-none">
             <tr>
               <th
                 onClick={() => onSort('codigo')}
-                className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors"
+                className="py-3.5 px-4 cursor-pointer hover:bg-slate-100 transition-colors"
               >
                 <div className="flex items-center gap-1.5">
                   <span>Código</span>
-                  <ArrowUpDown className={`w-3.5 h-3.5 ${sortField === 'codigo' ? 'text-indigo-600' : 'text-slate-300'}`} />
+                  <ArrowUpDown className={`w-3.5 h-3.5 ${sortField === 'codigo' ? 'text-indigo-600' : 'text-slate-400'}`} />
                 </div>
               </th>
               <th
                 onClick={() => onSort('nombre')}
-                className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors"
+                className="py-3.5 px-4 cursor-pointer hover:bg-slate-100 transition-colors"
               >
                 <div className="flex items-center gap-1.5">
                   <span>Producto / Detalle</span>
-                  <ArrowUpDown className={`w-3.5 h-3.5 ${sortField === 'nombre' ? 'text-indigo-600' : 'text-slate-300'}`} />
+                  <ArrowUpDown className={`w-3.5 h-3.5 ${sortField === 'nombre' ? 'text-indigo-600' : 'text-slate-400'}`} />
                 </div>
               </th>
-              <th className="py-3 px-4 hidden md:table-cell">Categoría</th>
-              <th className="py-3 px-4 hidden lg:table-cell">Ubicación</th>
+              <th className="py-3.5 px-4 hidden md:table-cell">Categoría</th>
+              <th className="py-3.5 px-4 hidden lg:table-cell">Ubicación</th>
               <th
                 onClick={() => onSort('cantidad')}
-                className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors text-right"
+                className="py-3.5 px-4 cursor-pointer hover:bg-slate-100 transition-colors text-right"
               >
                 <div className="flex items-center justify-end gap-1.5">
                   <span>Stock</span>
-                  <ArrowUpDown className={`w-3.5 h-3.5 ${sortField === 'cantidad' ? 'text-indigo-600' : 'text-slate-300'}`} />
+                  <ArrowUpDown className={`w-3.5 h-3.5 ${sortField === 'cantidad' ? 'text-indigo-600' : 'text-slate-400'}`} />
                 </div>
               </th>
-              <th className="py-3 px-4 text-center">Estado</th>
-              <th className="py-3 px-4 text-right">Acciones</th>
+              <th className="py-3.5 px-4 text-center">Estado</th>
+              <th className="py-3.5 px-4 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -73,9 +73,9 @@ export const ProductTable: React.FC<ProductTableProps> = ({
               const stockStatus = SearchEngine.getStockStatus(p.cantidad, p.stockMinimo);
 
               return (
-                <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
-                  {/* Código */}
-                  <td className="py-3 px-4 font-mono text-xs text-slate-500 font-semibold whitespace-nowrap">
+                <tr key={p.id} className="hover:bg-indigo-50/30 transition-colors">
+                  {/* Código - H-UI-01: text-slate-600 */}
+                  <td className="py-3 px-4 font-mono text-xs text-slate-600 font-semibold whitespace-nowrap">
                     {SearchEngine.highlightReact(p.codigo || '—', searchQuery)}
                   </td>
 
@@ -85,12 +85,12 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                       onClick={() => onViewDetail(p)}
                       className="cursor-pointer group flex flex-col"
                     >
-                      <span className="font-semibold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors flex items-center gap-1">
+                      <span className="font-semibold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors flex items-center gap-1">
                         {SearchEngine.highlightReact(p.nombre, searchQuery)}
                         <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 text-indigo-500 transition-opacity" />
                       </span>
                       {p.marca && (
-                        <span className="text-xs text-slate-400">Marca: {p.marca}</span>
+                        <span className="text-xs text-slate-500 font-medium">Marca: {p.marca}</span>
                       )}
                     </div>
                   </td>
@@ -98,7 +98,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                   {/* Categoría */}
                   <td className="py-3 px-4 hidden md:table-cell whitespace-nowrap">
                     {p.categoria ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/60">
                         {p.categoria}
                       </span>
                     ) : (
@@ -107,16 +107,16 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                   </td>
 
                   {/* Ubicación */}
-                  <td className="py-3 px-4 hidden lg:table-cell text-xs text-slate-500 whitespace-nowrap">
+                  <td className="py-3 px-4 hidden lg:table-cell text-xs text-slate-600 font-medium whitespace-nowrap">
                     {p.ubicacion || '—'}
                   </td>
 
-                  {/* Cantidad */}
+                  {/* Cantidad - H-UI-01: text-slate-500 */}
                   <td className="py-3 px-4 text-right whitespace-nowrap">
                     <span className={`font-mono text-base font-bold ${stockStatus.colorClass}`}>
                       {p.cantidad ?? 0}
                     </span>
-                    <span className="text-xs text-slate-400 ml-1">/ mín {p.stockMinimo ?? 5}</span>
+                    <span className="text-xs text-slate-500 font-medium ml-1">/ mín {p.stockMinimo ?? 5}</span>
                   </td>
 
                   {/* Estado */}
@@ -126,34 +126,38 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                     </Badge>
                   </td>
 
-                  {/* Acciones */}
+                  {/* Acciones - H-A11Y-04: aria-label en todos los botones */}
                   <td className="py-3 px-4 text-right whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => onAdjust(p)}
                         title="Ajustar Stock Rápido"
-                        className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                        aria-label={`Ajustar stock rápido de ${p.nombre}`}
+                        className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
                       >
                         <SlidersHorizontal className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => onEdit(p)}
                         title="Editar Producto"
-                        className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        aria-label={`Editar ficha de ${p.nombre}`}
+                        className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => onViewHistory(p)}
                         title="Ver Historial"
-                        className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors"
+                        aria-label={`Ver historial de ${p.nombre}`}
+                        className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                       >
                         <History className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => onDelete(p)}
                         title="Eliminar Producto"
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        aria-label={`Eliminar producto ${p.nombre}`}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

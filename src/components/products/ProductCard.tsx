@@ -26,23 +26,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const stockStatus = SearchEngine.getStockStatus(product.cantidad, product.stockMinimo);
 
   return (
-    <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex flex-col gap-3">
+    <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs hover:shadow-sm transition-all flex flex-col gap-3">
       {/* Top Header: Nombre y Stock */}
       <div className="flex items-start justify-between gap-3">
         <div
           onClick={() => onViewDetail(product)}
           className="flex-1 cursor-pointer group"
         >
-          <h4 className="font-semibold text-slate-800 text-sm leading-snug group-hover:text-indigo-600 transition-colors">
+          <h4 className="font-semibold text-slate-900 text-sm leading-snug group-hover:text-indigo-600 transition-colors">
             {SearchEngine.highlightReact(product.nombre, searchQuery)}
           </h4>
-          <span className="text-[11px] font-mono text-slate-400 font-medium">
+          <span className="text-[11px] font-mono text-slate-500 font-semibold">
             {SearchEngine.highlightReact(product.codigo || 'S/C', searchQuery)}
           </span>
         </div>
 
         <div className="flex flex-col items-end flex-shrink-0">
-          <span className={`text-2xl font-extrabold tracking-tight font-mono ${stockStatus.colorClass}`}>
+          <span className={`text-2xl font-black tracking-tight font-mono ${stockStatus.colorClass}`}>
             {product.cantidad ?? 0}
           </span>
           <Badge variant={stockStatus.level} size="sm">
@@ -51,31 +51,32 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </div>
       </div>
 
-      {/* Meta tags */}
-      <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+      {/* Meta tags - H-UI-01: text-slate-600 */}
+      <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-600">
         {product.categoria && (
-          <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md text-[11px] font-medium">
-            <Tag className="w-3 h-3 text-slate-400" />
+          <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md text-[11px] font-medium border border-slate-200/60">
+            <Tag className="w-3 h-3 text-slate-500" />
             {product.categoria}
           </span>
         )}
         {product.ubicacion && (
-          <span className="inline-flex items-center gap-1 bg-slate-50 text-slate-500 px-2 py-0.5 rounded-md text-[11px]">
-            <MapPin className="w-3 h-3 text-slate-400" />
+          <span className="inline-flex items-center gap-1 bg-slate-50 text-slate-600 px-2 py-0.5 rounded-md text-[11px] font-medium border border-slate-200/60">
+            <MapPin className="w-3 h-3 text-slate-500" />
             {product.ubicacion}
           </span>
         )}
         {product.marca && (
-          <span className="text-[11px] text-slate-400">· {product.marca}</span>
+          <span className="text-[11px] text-slate-500 font-medium">· {product.marca}</span>
         )}
       </div>
 
-      {/* Acciones */}
+      {/* Acciones - H-A11Y-04: aria-label en todos los botones */}
       <div className="flex items-center gap-1 pt-2 border-t border-slate-100 mt-0.5">
         <button
           onClick={() => onAdjust(product)}
           title="Ajustar Stock"
-          className="flex-1 flex items-center justify-center gap-1 py-1.5 px-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-xs font-semibold transition-colors"
+          aria-label={`Ajustar stock de ${product.nombre}`}
+          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-semibold transition-colors cursor-pointer border border-amber-200/60"
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
           <span>Ajustar</span>
@@ -84,7 +85,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <button
           onClick={() => onEdit(product)}
           title="Editar Producto"
-          className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+          aria-label={`Editar ${product.nombre}`}
+          className="p-1.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors cursor-pointer"
         >
           <Edit3 className="w-4 h-4" />
         </button>
@@ -92,7 +94,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <button
           onClick={() => onViewHistory(product)}
           title="Ver Historial"
-          className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors"
+          aria-label={`Ver historial de ${product.nombre}`}
+          className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
         >
           <History className="w-4 h-4" />
         </button>
@@ -100,7 +103,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <button
           onClick={() => onDelete(product)}
           title="Eliminar Producto"
-          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+          aria-label={`Eliminar ${product.nombre}`}
+          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -108,4 +112,3 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     </div>
   );
 };
-

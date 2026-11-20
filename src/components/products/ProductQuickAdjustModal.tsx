@@ -58,14 +58,14 @@ export const ProductQuickAdjustModal: React.FC<ProductQuickAdjustModalProps> = (
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Ajuste Rápido de Stock" maxWidth="sm">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100 flex items-center justify-between">
+        <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 flex items-center justify-between">
           <div>
-            <span className="text-xs font-mono text-slate-400 block">{product.codigo}</span>
-            <span className="text-sm font-semibold text-slate-800">{product.nombre}</span>
+            <span className="text-xs font-mono text-slate-500 font-semibold block">{product.codigo}</span>
+            <span className="text-sm font-bold text-slate-900">{product.nombre}</span>
           </div>
           <div className="text-right">
-            <span className="text-xs text-slate-400 block">Stock Actual</span>
-            <span className="text-lg font-bold font-mono text-slate-700">{currentStock}</span>
+            <span className="text-xs text-slate-500 font-medium block">Stock Actual</span>
+            <span className="text-lg font-bold font-mono text-slate-800">{currentStock}</span>
           </div>
         </div>
 
@@ -81,8 +81,8 @@ export const ProductQuickAdjustModal: React.FC<ProductQuickAdjustModalProps> = (
           />
 
           {diff !== 0 && (
-            <div className={`p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between ${
-              diff > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
+            <div className={`p-2.5 rounded-xl text-xs font-bold flex items-center justify-between border ${
+              diff > 0 ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'
             }`}>
               <span>Diferencia calculada:</span>
               <span className="font-mono text-sm">{diff > 0 ? `+${diff}` : diff} unidades</span>
@@ -90,7 +90,7 @@ export const ProductQuickAdjustModal: React.FC<ProductQuickAdjustModalProps> = (
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
               Motivo del Ajuste
             </label>
             <input
@@ -98,7 +98,7 @@ export const ProductQuickAdjustModal: React.FC<ProductQuickAdjustModalProps> = (
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
               placeholder="Ej: Conteo físico, rotura, mercadería encontrada..."
-              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+              className="w-full rounded-xl border border-slate-200 hover:border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 shadow-xs"
             />
           </div>
         </div>
@@ -115,4 +115,3 @@ export const ProductQuickAdjustModal: React.FC<ProductQuickAdjustModalProps> = (
     </Modal>
   );
 };
-

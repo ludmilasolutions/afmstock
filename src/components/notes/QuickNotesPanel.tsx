@@ -137,14 +137,14 @@ export const QuickNotesPanel: React.FC<QuickNotesPanelProps> = ({
   return (
     <div className="flex flex-col gap-5">
       {/* Input de nueva nota rápida */}
-      <form onSubmit={handleAdd} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex gap-2">
+      <form onSubmit={handleAdd} className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs flex gap-2">
         <div className="relative flex-1">
           <input
             type="text"
             value={newText}
             onChange={(e) => setNewText(e.target.value)}
             placeholder='Ej: "Llevé 2 cintas aisladoras para obra", "Traje 10 destornilladores"...'
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:bg-white transition-all"
+            className="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:bg-white transition-all shadow-2xs"
           />
         </div>
         <Button type="submit" loading={submitting} icon={<Plus className="w-4 h-4" />}>
@@ -154,39 +154,39 @@ export const QuickNotesPanel: React.FC<QuickNotesPanelProps> = ({
 
       {/* Lista de notas */}
       {drafts.length === 0 ? (
-        <div className="bg-white rounded-2xl p-8 border border-dashed border-slate-200 text-center text-slate-400 flex flex-col items-center gap-2">
+        <div className="bg-white rounded-3xl p-10 border border-dashed border-slate-200 text-center text-slate-500 flex flex-col items-center gap-2">
           <StickyNote className="w-8 h-8 text-slate-300" />
-          <p className="text-sm font-medium">No hay recordatorios pendientes en el depósito.</p>
+          <p className="text-sm font-semibold">No hay recordatorios pendientes en el depósito.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           {drafts.map((d) => {
             const analysis = analyzeDraft(d.texto);
 
             return (
               <div
                 key={d.id}
-                className="bg-white p-4 rounded-2xl border border-amber-200/80 shadow-xs flex flex-col justify-between gap-3 border-l-4 border-l-amber-500"
+                className="bg-white p-4.5 rounded-2xl border border-amber-200/90 shadow-xs flex flex-col justify-between gap-3 border-l-4 border-l-amber-500 hover:shadow-sm transition-shadow"
               >
                 <div>
-                  <p className="font-medium text-slate-800 text-sm leading-snug">
+                  <p className="font-semibold text-slate-900 text-sm leading-snug">
                     "{d.texto}"
                   </p>
-                  <span className="text-[11px] text-slate-400 flex items-center gap-1 mt-1.5">
-                    <Clock className="w-3 h-3" />
+                  <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1 mt-1.5">
+                    <Clock className="w-3 h-3 text-slate-400" />
                     {formatTimeAgo(d.fecha)} · {d.usuario ? d.usuario.split('@')[0] : 'admin'}
                   </span>
                 </div>
 
                 {/* Sugerencia inteligente si coincide con algún producto */}
                 {analysis.matchedProduct && (
-                  <div className="bg-amber-50/70 border border-amber-200/60 rounded-xl p-2.5 flex items-center justify-between text-xs">
+                  <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-2.5 flex items-center justify-between text-xs">
                     <div className="flex flex-col">
-                      <span className="text-amber-800 font-semibold flex items-center gap-1">
+                      <span className="text-amber-900 font-bold flex items-center gap-1">
                         <Zap className="w-3.5 h-3.5 text-amber-600" />
                         Sugerido: {analysis.tipo === 'entrada' ? '+' : '−'}{analysis.cantidad} u.
                       </span>
-                      <span className="text-slate-600 truncate max-w-[200px]">
+                      <span className="text-slate-700 font-medium truncate max-w-[200px]">
                         {analysis.matchedProduct.nombre}
                       </span>
                     </div>
@@ -200,7 +200,7 @@ export const QuickNotesPanel: React.FC<QuickNotesPanelProps> = ({
                           reason: `Procesado rápido de recordatorio: "${d.texto}"`,
                         })
                       }
-                      className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg transition-colors flex items-center gap-1 text-[11px]"
+                      className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg transition-colors flex items-center gap-1 text-[11px] cursor-pointer shadow-2xs"
                     >
                       <span>Aplicar</span>
                       <ArrowRight className="w-3 h-3" />
@@ -208,18 +208,19 @@ export const QuickNotesPanel: React.FC<QuickNotesPanelProps> = ({
                   </div>
                 )}
 
-                {/* Acciones */}
+                {/* Acciones - H-A11Y-04 */}
                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                   <button
                     onClick={() => handleOpenProcess(d)}
-                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-2.5 py-1 rounded-lg transition-colors"
+                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
                   >
                     Procesar Stock...
                   </button>
                   <button
                     onClick={() => onDeleteDraft(d.id)}
                     title="Eliminar recordatorio"
-                    className="p-1 text-slate-400 hover:text-red-600 rounded-lg transition-colors"
+                    aria-label={`Eliminar recordatorio: ${d.texto}`}
+                    className="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -233,17 +234,17 @@ export const QuickNotesPanel: React.FC<QuickNotesPanelProps> = ({
       {/* Modal para procesar nota a stock */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Procesar Recordatorio a Stock" maxWidth="md">
         <form onSubmit={handleSaveProcess} className="flex flex-col gap-4">
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
-            <span className="text-slate-400 block mb-0.5">Texto original:</span>
-            <strong className="text-slate-700">"{activeDraft?.texto}"</strong>
+          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 text-xs">
+            <span className="text-slate-500 font-medium block mb-0.5">Texto original:</span>
+            <strong className="text-slate-800">"{activeDraft?.texto}"</strong>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
+          <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-2xl">
             <button
               type="button"
               onClick={() => setProcType('entrada')}
-              className={`py-1.5 rounded-lg text-xs font-bold transition-all ${
-                procType === 'entrada' ? 'bg-emerald-600 text-white' : 'text-slate-600'
+              className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                procType === 'entrada' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Entrada (+)
@@ -251,8 +252,8 @@ export const QuickNotesPanel: React.FC<QuickNotesPanelProps> = ({
             <button
               type="button"
               onClick={() => setProcType('salida')}
-              className={`py-1.5 rounded-lg text-xs font-bold transition-all ${
-                procType === 'salida' ? 'bg-red-600 text-white' : 'text-slate-600'
+              className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                procType === 'salida' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Salida (−)
@@ -260,7 +261,7 @@ export const QuickNotesPanel: React.FC<QuickNotesPanelProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
               Producto Asociado *
             </label>
             <input
@@ -272,10 +273,10 @@ export const QuickNotesPanel: React.FC<QuickNotesPanelProps> = ({
                 setProcSearch(e.target.value);
                 setProcProdId('');
               }}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className="w-full rounded-xl border border-slate-200 hover:border-slate-300 px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 shadow-xs"
             />
             {procSearch && !procProdId && (
-              <div className="mt-1 bg-white border border-slate-200 rounded-xl max-h-40 overflow-y-auto shadow-lg divide-y divide-slate-100">
+              <div className="mt-1 bg-white border border-slate-200 rounded-2xl max-h-40 overflow-y-auto shadow-lg divide-y divide-slate-100">
                 {filteredModalProducts.map((p) => (
                   <div
                     key={p.id}
@@ -283,10 +284,10 @@ export const QuickNotesPanel: React.FC<QuickNotesPanelProps> = ({
                       setProcProdId(p.id);
                       setProcSearch(`${p.codigo} - ${p.nombre}`);
                     }}
-                    className="p-2 text-xs hover:bg-slate-50 cursor-pointer flex justify-between"
+                    className="p-2.5 text-xs hover:bg-indigo-50/40 cursor-pointer flex justify-between transition-colors"
                   >
-                    <span className="font-medium text-slate-800">{p.nombre}</span>
-                    <span className="font-mono text-slate-400">Stock: {p.cantidad}</span>
+                    <span className="font-semibold text-slate-800">{p.nombre}</span>
+                    <span className="font-mono text-slate-500 font-medium">Stock: {p.cantidad}</span>
                   </div>
                 ))}
               </div>

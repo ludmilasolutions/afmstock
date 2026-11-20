@@ -174,7 +174,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           </div>
 
           <div className="col-span-2">
-            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
               Notas Adicionales
             </label>
             <textarea
@@ -182,7 +182,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               value={formData.notas}
               onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
               placeholder="Observaciones, medidas, compatibilidades..."
-              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+              className="w-full rounded-xl border border-slate-200 hover:border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 shadow-xs"
             />
           </div>
         </div>
@@ -199,4 +199,3 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     </Modal>
   );
 };
-

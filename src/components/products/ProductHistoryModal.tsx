@@ -56,7 +56,7 @@ export const ProductHistoryModal: React.FC<ProductHistoryModalProps> = ({
         <div className="flex border-b border-slate-200 gap-4">
           <button
             onClick={() => setActiveTab('movimientos')}
-            className={`pb-2.5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all ${
+            className={`pb-2.5 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
               activeTab === 'movimientos'
                 ? 'border-indigo-600 text-indigo-600'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -67,7 +67,7 @@ export const ProductHistoryModal: React.FC<ProductHistoryModalProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('ediciones')}
-            className={`pb-2.5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all ${
+            className={`pb-2.5 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
               activeTab === 'ediciones'
                 ? 'border-indigo-600 text-indigo-600'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -84,7 +84,7 @@ export const ProductHistoryModal: React.FC<ProductHistoryModalProps> = ({
           <div className="max-h-96 overflow-y-auto">
             {activeTab === 'movimientos' ? (
               movimientos.length === 0 ? (
-                <div className="text-center py-8 text-slate-400 text-sm">
+                <div className="text-center py-8 text-slate-500 text-sm font-medium">
                   No hay movimientos registrados para este producto.
                 </div>
               ) : (
@@ -94,7 +94,7 @@ export const ProductHistoryModal: React.FC<ProductHistoryModalProps> = ({
                     const isCreacion = m.tipo === 'creacion';
 
                     return (
-                      <div key={m.id} className="py-2.5 flex items-center justify-between text-sm">
+                      <div key={m.id} className="py-2.5 flex items-center justify-between text-sm hover:bg-slate-50/50 rounded-xl px-2 transition-colors">
                         <div className="flex items-center gap-3">
                           <div className="flex-shrink-0">
                             {isEntrada ? (
@@ -102,24 +102,24 @@ export const ProductHistoryModal: React.FC<ProductHistoryModalProps> = ({
                             ) : isCreacion ? (
                               <PlusCircle className="w-5 h-5 text-indigo-600" />
                             ) : (
-                              <ArrowUpCircle className="w-5 h-5 text-red-600" />
+                              <ArrowUpCircle className="w-5 h-5 text-rose-600" />
                             )}
                           </div>
                           <div>
-                            <span className="font-semibold text-slate-800 capitalize">
+                            <span className="font-bold text-slate-900 capitalize">
                               {m.tipo}
                             </span>
                             {m.nota && (
-                              <p className="text-xs text-slate-500">{m.nota}</p>
+                              <p className="text-xs text-slate-600">{m.nota}</p>
                             )}
-                            <span className="text-[11px] text-slate-400">
+                            <span className="text-[11px] text-slate-500 font-medium">
                               {formatDate(m.fecha)} · {m.usuario ? m.usuario.split('@')[0] : 'Sistema'}
                             </span>
                           </div>
                         </div>
 
                         <div className="text-right font-mono font-bold text-sm">
-                          <span className={isEntrada ? 'text-emerald-600' : isCreacion ? 'text-indigo-600' : 'text-red-600'}>
+                          <span className={isEntrada ? 'text-emerald-600' : isCreacion ? 'text-indigo-600' : 'text-rose-600'}>
                             {isEntrada ? '+' : isCreacion ? '' : '−'}
                             {m.cantidad}
                           </span>
@@ -130,38 +130,38 @@ export const ProductHistoryModal: React.FC<ProductHistoryModalProps> = ({
                 </div>
               )
             ) : ediciones.length === 0 ? (
-              <div className="text-center py-8 text-slate-400 text-sm">
+              <div className="text-center py-8 text-slate-500 text-sm font-medium">
                 No hay registros de edición para este producto.
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
                 {ediciones.map((ed) => (
-                  <div key={ed.id} className="py-3 text-xs flex flex-col gap-1">
+                  <div key={ed.id} className="py-3 text-xs flex flex-col gap-1 hover:bg-slate-50/50 rounded-xl px-2 transition-colors">
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-700 capitalize bg-slate-100 px-2 py-0.5 rounded">
+                      <span className="font-bold text-slate-800 capitalize bg-slate-100 px-2 py-0.5 rounded border border-slate-200/60">
                         {ed.tipo}
                       </span>
-                      <span className="text-slate-400">
+                      <span className="text-slate-500 font-medium">
                         {formatDate(ed.fecha)} · {ed.usuario ? ed.usuario.split('@')[0] : 'Sistema'}
                       </span>
                     </div>
 
                     {ed.tipo === 'ajuste' && (
-                      <p className="text-slate-600 font-medium">
+                      <p className="text-slate-700 font-medium">
                         Ajuste de stock: <strong>{ed.cantidadAnterior}</strong> → <strong>{ed.cantidadNueva}</strong>
                         {ed.motivo ? ` (Motivo: ${ed.motivo})` : ''}
                       </p>
                     )}
 
                     {ed.tipo === 'edicion' && ed.datosAnteriores && ed.datosNuevos && (
-                      <div className="text-slate-600 space-y-0.5 pl-2 border-l-2 border-slate-200 mt-1">
+                      <div className="text-slate-700 space-y-0.5 pl-2.5 border-l-2 border-indigo-200 mt-1">
                         {Object.keys(ed.datosNuevos).map((k) => {
                           const ant = ed.datosAnteriores?.[k];
                           const nue = ed.datosNuevos?.[k];
                           if (ant !== undefined && nue !== undefined && String(ant) !== String(nue) && k !== 'fechaEdicion') {
                             return (
                               <div key={k}>
-                                <span className="font-semibold capitalize">{k}:</span> {String(ant)} → <strong className="text-indigo-600">{String(nue)}</strong>
+                                <span className="font-semibold capitalize text-slate-600">{k}:</span> {String(ant)} → <strong className="text-indigo-600">{String(nue)}</strong>
                               </div>
                             );
                           }
@@ -185,4 +185,3 @@ export const ProductHistoryModal: React.FC<ProductHistoryModalProps> = ({
     </Modal>
   );
 };
-

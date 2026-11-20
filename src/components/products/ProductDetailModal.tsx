@@ -30,12 +30,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="Ficha del Producto" maxWidth="md">
       <div className="flex flex-col gap-5">
         {/* Encabezado con estado y stock */}
-        <div className="flex items-start justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
+        <div className="flex items-start justify-between bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80">
           <div>
-            <span className="text-xs font-mono text-slate-400 font-semibold block">
+            <span className="text-xs font-mono text-slate-500 font-bold block">
               {product.codigo || 'SIN CÓDIGO'}
             </span>
-            <h3 className="text-lg font-bold text-slate-800 leading-snug">
+            <h3 className="text-lg font-bold text-slate-900 leading-snug">
               {product.nombre}
             </h3>
           </div>
@@ -49,65 +49,65 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Grilla de información detallada */}
+        {/* Grilla de información detallada - H-UI-01: text-slate-500 */}
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="p-3 bg-white rounded-xl border border-slate-100 flex flex-col">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-1">
-              <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
+          <div className="p-3 bg-white rounded-xl border border-slate-200/70 flex flex-col shadow-2xs">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
               Stock Mínimo
             </span>
-            <span className="font-semibold text-slate-700 font-mono">
+            <span className="font-semibold text-slate-800 font-mono">
               {product.stockMinimo ?? 5} unidades
             </span>
           </div>
 
-          <div className="p-3 bg-white rounded-xl border border-slate-100 flex flex-col">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-1">
-              <Tag className="w-3.5 h-3.5 text-slate-400" />
+          <div className="p-3 bg-white rounded-xl border border-slate-200/70 flex flex-col shadow-2xs">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+              <Tag className="w-3.5 h-3.5 text-slate-500" />
               Categoría
             </span>
-            <span className="font-semibold text-slate-700">
+            <span className="font-semibold text-slate-800">
               {product.categoria || '—'}
             </span>
           </div>
 
-          <div className="p-3 bg-white rounded-xl border border-slate-100 flex flex-col">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-1">
-              <MapPin className="w-3.5 h-3.5 text-slate-400" />
+          <div className="p-3 bg-white rounded-xl border border-slate-200/70 flex flex-col shadow-2xs">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+              <MapPin className="w-3.5 h-3.5 text-slate-500" />
               Ubicación en Depósito
             </span>
-            <span className="font-semibold text-slate-700">
+            <span className="font-semibold text-slate-800">
               {product.ubicacion || '—'}
             </span>
           </div>
 
-          <div className="p-3 bg-white rounded-xl border border-slate-100 flex flex-col">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-1">
-              <Building className="w-3.5 h-3.5 text-slate-400" />
+          <div className="p-3 bg-white rounded-xl border border-slate-200/70 flex flex-col shadow-2xs">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+              <Building className="w-3.5 h-3.5 text-slate-500" />
               Marca
             </span>
-            <span className="font-semibold text-slate-700">
+            <span className="font-semibold text-slate-800">
               {product.marca || '—'}
             </span>
           </div>
 
-          <div className="p-3 bg-white rounded-xl border border-slate-100 flex flex-col col-span-2">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-1">
-              <Truck className="w-3.5 h-3.5 text-slate-400" />
+          <div className="p-3 bg-white rounded-xl border border-slate-200/70 flex flex-col col-span-2 shadow-2xs">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+              <Truck className="w-3.5 h-3.5 text-slate-500" />
               Proveedor
             </span>
-            <span className="font-semibold text-slate-700">
+            <span className="font-semibold text-slate-800">
               {product.proveedor || '—'}
             </span>
           </div>
 
           {product.notas && (
-            <div className="p-3 bg-white rounded-xl border border-slate-100 flex flex-col col-span-2">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-1">
-                <FileText className="w-3.5 h-3.5 text-slate-400" />
+            <div className="p-3 bg-white rounded-xl border border-slate-200/70 flex flex-col col-span-2 shadow-2xs">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                <FileText className="w-3.5 h-3.5 text-slate-500" />
                 Notas Adicionales
               </span>
-              <p className="text-slate-600 text-sm whitespace-pre-wrap">
+              <p className="text-slate-700 text-sm whitespace-pre-wrap leading-relaxed">
                 {product.notas}
               </p>
             </div>
@@ -115,16 +115,16 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         </div>
 
         {/* Metadatos históricos / auditoría */}
-        <div className="text-[11px] text-slate-400 flex flex-col gap-1 pt-2 border-t border-slate-100">
+        <div className="text-[11px] text-slate-500 font-medium flex flex-col gap-1 pt-2 border-t border-slate-100">
           {product.fechaCreacion && (
             <span className="flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
+              <Calendar className="w-3 h-3 text-slate-400" />
               Creado: {formatDate(product.fechaCreacion)} {product.usuarioCreacion ? `por ${product.usuarioCreacion.split('@')[0]}` : ''}
             </span>
           )}
           {product.fechaEdicion && (
             <span className="flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
+              <Calendar className="w-3 h-3 text-slate-400" />
               Última edición: {formatDate(product.fechaEdicion)} {product.usuarioEdicion ? `por ${product.usuarioEdicion.split('@')[0]}` : ''}
             </span>
           )}
@@ -162,4 +162,3 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     </Modal>
   );
 };
-

@@ -33,12 +33,10 @@ describe('SearchEngine Tests', () => {
   });
 
   it('busca insensible a acentos y tildes (caño, termofusión)', () => {
-    // Buscar "termofusion" sin acento debe encontrar "Caño Termofusión"
     const r1 = SearchEngine.performLocalSearch(mockProductos, 'termofusion');
     expect(r1.length).toBe(1);
     expect(r1[0].nombre).toBe('Caño Termofusión 20mm');
 
-    // Buscar "cano" sin ñ ni tilde debe encontrar "Caño"
     const r2 = SearchEngine.performLocalSearch(mockProductos, 'cano');
     expect(r2.length).toBe(1);
     expect(r2[0].nombre).toContain('Caño');
@@ -51,13 +49,9 @@ describe('SearchEngine Tests', () => {
   });
 
   it('calcula correctamente el estado de stock', () => {
-    // 0 unidades -> critical
     expect(SearchEngine.getStockStatus(0, 5).level).toBe('critical');
-    // Menos que el mínimo -> low
     expect(SearchEngine.getStockStatus(4, 10).level).toBe('low');
-    // Igual o mayor al mínimo -> ok
     expect(SearchEngine.getStockStatus(15, 10).level).toBe('ok');
-    // Manejo de valores nulos o indefinidos -> critical
     expect(SearchEngine.getStockStatus(null, 5).level).toBe('critical');
   });
 
@@ -71,5 +65,56 @@ describe('SearchEngine Tests', () => {
     const results = SearchEngine.performLocalSearch(mockProductos, 'producto_totalmente_inexistente_xyz');
     expect(results.length).toBe(0);
   });
-});
 
+  // PRUEBAS DE FASE 2: Comportamiento con más de 500 productos y sin truncamiento involuntario
+  it('devuelve más de 500 productos coincidentes si no se pasa limit', () => {
+    const bigCatalog: Producto[] = [];
+    for (let i = 1; i <= 600; i++) {
+      bigCatalog.push({
+        id: `p_${i}`,
+        codigo: `PROD-${i}`,
+        nombre: `Arandela Galvanizada Nº ${i}`,
+        cantidad: 10,
+        stockMinimo: 5,
+      });
+    }
+
+    const results = SearchEngine.performLocalSearch(bigCatalog, 'Arandela');
+    expect(results.length).toBe(600);
+  });
+
+  it('encuentra producto ubicado en la posición 580 con tolerancia tipográfica (Levenshtein)', () => {
+    const bigCatalog: Producto[] = [];
+    for (let i = 1; i <= 600; i++) {
+      bigCatalog.push({
+        id: `p_${i}`,
+        codigo: `PROD-${i}`,
+        nombre: i === 580 ? 'Serrucho Costillero Profesional' : `Bulón Hexagonal ${i}`,
+        cantidad: 10,
+        stockMinimo: 5,
+      });
+    }
+
+    // "serucho" tiene distancia 1 respecto a "serrucho"
+    const results = SearchEngine.performLocalSearch(bigCatalog, 'serucho');
+    expect(results.length).toBe(1);
+    expect(results[0].id).toBe('p_580');
+    expect(results[0].nombre).toBe('Serrucho Costillero Profesional');
+  });
+
+  it('respeta options.limit cuando se proporciona explícitamente', () => {
+    const bigCatalog: Producto[] = [];
+    for (let i = 1; i <= 100; i++) {
+      bigCatalog.push({
+        id: `p_${i}`,
+        codigo: `PROD-${i}`,
+        nombre: `Perno Roscado ${i}`,
+        cantidad: 5,
+        stockMinimo: 2,
+      });
+    }
+
+    const results = SearchEngine.performLocalSearch(bigCatalog, 'Perno', { limit: 15 });
+    expect(results.length).toBe(15);
+  });
+});
