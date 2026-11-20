@@ -1,0 +1,25 @@
+# Logs y dependencias
+node_modules/
+dist/
+dist-ssr/
+*.local
+.env
+.env.production
+.firebase/
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
