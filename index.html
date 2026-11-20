@@ -912,6 +912,15 @@
             font-style: italic;
             margin-top: 0.1rem;
         }
+
+        /* Resaltado de búsqueda seguro */
+        .search-highlight {
+            background-color: rgba(79, 70, 229, 0.18);
+            color: var(--primary-dark);
+            font-weight: 700;
+            padding: 0.05rem 0.25rem;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -1507,12 +1516,33 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="table-responsive">
-                        <table class="table table-sm" id="historialTable">
-                            <thead><tr><th>Tipo</th><th>Cantidad</th><th>Fecha</th><th>Usuario</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                        <p class="text-muted" id="sinHistorial">No hay movimientos para este producto.</p>
+                    <ul class="nav nav-tabs mb-3" id="historialTabs" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="tabMovimientosBtn" data-bs-toggle="tab" data-bs-target="#tabMovimientosContent" type="button"><i class="bi bi-arrow-left-right me-1"></i>Movimientos</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="tabEdicionesBtn" data-bs-toggle="tab" data-bs-target="#tabEdicionesContent" type="button"><i class="bi bi-clock-history me-1"></i>Ediciones y Ajustes</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="historialTabsContent">
+                        <div class="tab-pane fade show active" id="tabMovimientosContent">
+                            <div class="table-responsive">
+                                <table class="table table-sm" id="historialTable">
+                                    <thead><tr><th>Tipo</th><th>Cantidad</th><th>Fecha</th><th>Usuario</th></tr></thead>
+                                    <tbody></tbody>
+                                </table>
+                                <p class="text-muted" id="sinHistorial">No hay movimientos para este producto.</p>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="tabEdicionesContent">
+                            <div class="table-responsive">
+                                <table class="table table-sm" id="historialEdicionesTable">
+                                    <thead><tr><th>Tipo</th><th>Detalle / Motivo</th><th>Fecha</th><th>Usuario</th></tr></thead>
+                                    <tbody></tbody>
+                                </table>
+                                <p class="text-muted" id="sinHistorialEdiciones">No hay registros de ediciones para este producto.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2195,6 +2225,9 @@
                     const actualStock = prodDoc.data().cantidad || 0;
                     let nuevoStock = actualStock;
                     if (mov.tipo === 'entrada') {
+                        if (actualStock < mov.cantidad) {
+                            throw new Error(`Stock insuficiente: el stock actual (${actualStock}) es menor a las ${mov.cantidad} unidades a revertir. Revertirlo dejaría el inventario en negativo.`);
+                        }
                         nuevoStock = actualStock - mov.cantidad;
                     } else if (mov.tipo === 'salida') {
                         nuevoStock = actualStock + mov.cantidad;
@@ -2244,10 +2277,19 @@
         let chartDonut = null;
         let chartTopRotacion = null;
 
+        function parseInputDate(val, isEnd = false) {
+            if (!val) return null;
+            const parts = val.split('-');
+            if (parts.length !== 3) return new Date(val);
+            const y = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10) - 1;
+            const d = parseInt(parts[2], 10);
+            return isEnd ? new Date(y, m, d, 23, 59, 59, 999) : new Date(y, m, d, 0, 0, 0, 0);
+        }
+
         function renderReportes() {
-            const desde = document.getElementById('fechaDesde')?.value ? new Date(document.getElementById('fechaDesde').value) : null;
-            const hasta = document.getElementById('fechaHasta')?.value ? new Date(document.getElementById('fechaHasta').value) : null;
-            if (hasta) hasta.setHours(23, 59, 59);
+            const desde = parseInputDate(document.getElementById('fechaDesde')?.value, false);
+            const hasta = parseInputDate(document.getElementById('fechaHasta')?.value, true);
 
             const filtered = movimientos.filter(m => {
                 if (!m.fecha) return false;
@@ -2579,8 +2621,7 @@
                 return;
             }
 
-            const batch = db.batch();
-            let updatesCount = 0;
+            const itemsToUpdate = [];
 
             productos.forEach(p => {
                 const ventas = ventas30dPorProducto[p.id] || 0;
@@ -2592,23 +2633,30 @@
                 }
 
                 if (p.stockMinimo !== sugeridoMin) {
-                    const ref = db.collection('productos').doc(p.id);
-                    batch.update(ref, { stockMinimo: sugeridoMin });
-                    updatesCount++;
+                    itemsToUpdate.push({ id: p.id, stockMinimo: sugeridoMin });
                 }
             });
 
-            if (updatesCount === 0) {
+            if (itemsToUpdate.length === 0) {
                 showToast('Todos los stocks mínimos ya están optimizados', 'info');
                 return;
             }
 
             try {
-                await batch.commit();
-                showToast(`Se optimizaron ${updatesCount} stocks mínimos correctamente`, 'success');
+                const CHUNK_SIZE = 400;
+                for (let i = 0; i < itemsToUpdate.length; i += CHUNK_SIZE) {
+                    const chunk = itemsToUpdate.slice(i, i + CHUNK_SIZE);
+                    const batch = db.batch();
+                    chunk.forEach(item => {
+                        const ref = db.collection('productos').doc(item.id);
+                        batch.update(ref, { stockMinimo: item.stockMinimo });
+                    });
+                    await batch.commit();
+                }
+                showToast(`Se optimizaron ${itemsToUpdate.length} stocks mínimos correctamente`, 'success');
             } catch (err) {
                 console.error(err);
-                showToast('Error al optimizar stocks mínimos', 'error');
+                showToast('Error al optimizar stocks mínimos: ' + err.message, 'error');
             }
         });
 
@@ -2749,7 +2797,7 @@
                 const fecha = doc.fecha ? new Date(doc.fecha.seconds * 1000) : new Date();
                 const haceCuanto = calcularHaceCuanto(fecha);
                 const usuario = doc.usuario ? doc.usuario.split('@')[0] : 'Sistema';
-                const escapedTexto = (doc.texto || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
+                const safeTexto = SearchEngine ? SearchEngine.escapeHTML(doc.texto || '') : (doc.texto || '');
 
                 // Detección inteligente para previsualización y auto-procesamiento rápido
                 const textNorm = norm(doc.texto);
@@ -2757,10 +2805,10 @@
                 if (textNorm.includes('traje') || textNorm.includes('compre') || textNorm.includes('ingreso') || textNorm.includes('recibi') || textNorm.includes('+') || textNorm.includes('lleg') || textNorm.includes('entr') || textNorm.includes('sum')) {
                     tipo = 'entrada';
                 }
-                const numbers = doc.texto.match(/\b\d+\b/);
+                const numbers = (doc.texto || '').match(/\b\d+\b/);
                 const cantidad = numbers ? parseInt(numbers[0], 10) : 1;
 
-                let cleanQuery = doc.texto.toLowerCase()
+                let cleanQuery = (doc.texto || '').toLowerCase()
                     .replace(/\b\d+\b/g, '')
                     .replace(/(lleve|retire|saque|traje|compre|ingreso|recibi|venta|vendo|para|del|de|un|una|u|u\.|caja|cajas|paquete|paquetes|bolsa|bolsas)/g, '')
                     .trim();
@@ -2780,9 +2828,9 @@
                     autoProcesarHtml = `
                         <div class="mt-2 p-1.5 px-2 rounded d-flex justify-content-between align-items-center" style="background:rgba(217,119,6,0.04); border:1px dashed rgba(217,119,6,0.2); font-size:0.75rem;">
                             <span class="text-muted fw-semibold">
-                                <i class="bi bi-${icon} me-1"></i>Sugerido: <strong class="text-dark">${sign}${cantidad} u.</strong> de <strong>${matchedProduct.nombre}</strong>
+                                <i class="bi bi-${icon} me-1"></i>Sugerido: <strong class="text-dark">${sign}${cantidad} u.</strong> de <strong>${SearchEngine ? SearchEngine.escapeHTML(matchedProduct.nombre) : matchedProduct.nombre}</strong>
                             </span>
-                            <button class="btn btn-xs btn-warning text-dark fw-bold py-0 px-2" style="font-size:0.7rem; line-height:1.4;" onclick="ejecutarAutoProcesamiento('${doc.id}', '${matchedProduct.id}', '${tipo}', ${cantidad}, '${escapedTexto}')">
+                            <button class="btn btn-xs btn-warning text-dark fw-bold py-0 px-2 btn-auto-procesar" style="font-size:0.7rem; line-height:1.4;" data-id="${doc.id}" data-prod-id="${matchedProduct.id}" data-tipo="${tipo}" data-cantidad="${cantidad}">
                                 <i class="bi bi-lightning-fill"></i>Aplicar
                             </button>
                         </div>
@@ -2790,19 +2838,19 @@
                 }
 
                 return `
-                    <div class="p-3 rounded border border-1 bg-white border-warning fade-in shadow-sm" style="border-left: 4px solid var(--warning) !important;">
+                    <div class="p-3 rounded border border-1 bg-white border-warning fade-in shadow-sm mb-2" style="border-left: 4px solid var(--warning) !important;">
                         <div class="d-flex justify-content-between align-items-center">
                             <div style="min-width: 0; flex: 1;" class="me-3">
-                                <p class="mb-0 fw-semibold text-dark" style="font-size:0.9rem; line-height: 1.35;">"${doc.texto}"</p>
+                                <p class="mb-0 fw-semibold text-dark" style="font-size:0.9rem; line-height: 1.35;">"${safeTexto}"</p>
                                 <small class="text-muted d-block mt-1" style="font-size:0.75rem;">
                                     <i class="bi bi-person me-1"></i>${usuario} · <i class="bi bi-clock me-1"></i>${haceCuanto}
                                 </small>
                             </div>
                             <div class="d-flex gap-2 flex-shrink-0">
-                                <button class="btn btn-sm btn-outline-warning text-warning fw-bold" onclick="abrirProcesarNota('${doc.id}', '${escapedTexto}')" style="font-size:0.78rem; padding:0.35rem 0.65rem; background:rgba(217,119,6,0.05); border:1px solid rgba(217,119,6,0.25);">
+                                <button class="btn btn-sm btn-outline-warning text-warning fw-bold btn-abrir-procesar-nota" data-id="${doc.id}" style="font-size:0.78rem; padding:0.35rem 0.65rem; background:rgba(217,119,6,0.05); border:1px solid rgba(217,119,6,0.25);">
                                     <i class="bi bi-gear-fill me-1"></i>Procesar
                                 </button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="eliminarNotaRapida('${doc.id}')" style="font-size:0.78rem; padding:0.35rem 0.65rem; border:1px solid rgba(220,38,38,0.25);">
+                                <button class="btn btn-sm btn-outline-danger btn-eliminar-nota" data-id="${doc.id}" style="font-size:0.78rem; padding:0.35rem 0.65rem; border:1px solid rgba(220,38,38,0.25);">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </div>
@@ -2810,6 +2858,27 @@
                         ${autoProcesarHtml}
                     </div>`;
             }).join('');
+
+            // Asignar listeners sin riesgo de inyección o problemas de sintaxis por saltos de línea
+            container.querySelectorAll('.btn-abrir-procesar-nota').forEach(b => {
+                b.addEventListener('click', () => {
+                    const doc = borradores.find(x => x.id === b.dataset.id);
+                    if (doc) abrirProcesarNota(doc.id, doc.texto);
+                });
+            });
+
+            container.querySelectorAll('.btn-eliminar-nota').forEach(b => {
+                b.addEventListener('click', () => eliminarNotaRapida(b.dataset.id));
+            });
+
+            container.querySelectorAll('.btn-auto-procesar').forEach(b => {
+                b.addEventListener('click', () => {
+                    const doc = borradores.find(x => x.id === b.dataset.id);
+                    if (doc) {
+                        ejecutarAutoProcesamiento(b.dataset.id, b.dataset.prodId, b.dataset.tipo, parseInt(b.dataset.cantidad) || 1, doc.texto, b);
+                    }
+                });
+            });
         }
 
         function calcularHaceCuanto(date) {
@@ -3064,9 +3133,13 @@
             }
         }, 1000);
 
-        window.ejecutarAutoProcesamiento = async function(notaId, productoId, tipo, cantidad, textoOriginal) {
+        window.ejecutarAutoProcesamiento = async function(notaId, productoId, tipo, cantidad, textoOriginal, triggerBtn = null) {
             if (!confirm(`¿Aplicar procesamiento rápido?\nEsto sumará/restará ${cantidad} unidades de stock al producto detectado.`)) {
                 return;
+            }
+            if (triggerBtn) {
+                if (triggerBtn.disabled) return;
+                triggerBtn.disabled = true;
             }
             try {
                 const prodRef = db.collection('productos').doc(productoId);
@@ -3103,6 +3176,8 @@
             } catch (err) {
                 console.error(err);
                 showToast('Error al auto-procesar: ' + err.message, 'error');
+            } finally {
+                if (triggerBtn) triggerBtn.disabled = false;
             }
         };
 
@@ -3245,42 +3320,48 @@
             const cantidad = Number(document.getElementById('procesarNotaCantidad').value);
             const motivo = document.getElementById('procesarNotaMotivo').value.trim();
 
-            const prodRef = db.collection('productos').doc(productoId);
-            const prodDoc = await prodRef.get();
-            if (!prodDoc.exists) { showToast('Producto no encontrado', 'error'); return; }
-            const prod = prodDoc.data();
-
-            if (tipo === 'salida' && prod.cantidad < cantidad) {
-                showToast(`Stock insuficiente. Disponible: ${prod.cantidad}`, 'error');
+            if (isNaN(cantidad) || cantidad <= 0 || !Number.isFinite(cantidad)) {
+                showToast('Ingresá una cantidad válida mayor a 0', 'warning');
                 return;
             }
 
             const btn = document.getElementById('btnGuardarProcesarNota');
+            if (btn.disabled) return;
             const originalText = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Procesando...';
 
-            const nuevaCantidad = tipo === 'entrada' ? prod.cantidad + cantidad : prod.cantidad - cantidad;
-            const batch = db.batch();
-            
-            // Actualizar stock del producto
-            batch.update(prodRef, { cantidad: nuevaCantidad });
-            
-            // Registrar movimiento
-            batch.set(db.collection('movimientos').doc(), {
-                productoId,
-                productoNombre: prod.nombre,
-                tipo,
-                cantidad,
-                nota: motivo || 'Procesado desde borrador',
-                fecha: firebase.firestore.FieldValue.serverTimestamp(),
-                usuario: currentUser.email
-            });
-
-            // Borrar nota
-            batch.delete(db.collection('borradores').doc(notaId));
-
             try {
+                const prodRef = db.collection('productos').doc(productoId);
+                const prodDoc = await prodRef.get();
+                if (!prodDoc.exists) { showToast('Producto no encontrado', 'error'); return; }
+                const prod = prodDoc.data();
+
+                if (tipo === 'salida' && prod.cantidad < cantidad) {
+                    showToast(`Stock insuficiente. Disponible: ${prod.cantidad}`, 'error');
+                    return;
+                }
+
+                const nuevaCantidad = tipo === 'entrada' ? prod.cantidad + cantidad : prod.cantidad - cantidad;
+                const batch = db.batch();
+                
+                // Actualizar stock del producto
+                batch.update(prodRef, { cantidad: nuevaCantidad });
+                
+                // Registrar movimiento
+                batch.set(db.collection('movimientos').doc(), {
+                    productoId,
+                    productoNombre: prod.nombre,
+                    tipo,
+                    cantidad,
+                    nota: motivo || 'Procesado desde borrador',
+                    fecha: firebase.firestore.FieldValue.serverTimestamp(),
+                    usuario: currentUser ? currentUser.email : 'admin@stockafm.com'
+                });
+
+                // Borrar nota
+                batch.delete(db.collection('borradores').doc(notaId));
+
                 await batch.commit();
                 procesarNotaModal.hide();
                 showToast(`Movimiento registrado y recordatorio archivado correctamente`, 'success');
@@ -3320,13 +3401,18 @@
                 // Si no hay código, generar uno automático
                 if (!codigo) {
                     const snap = await db.collection('productos').get();
+                    const existingCodes = new Set(snap.docs.map(d => d.data().codigo));
                     const maxCodigo = snap.docs
                         .map(d => d.data().codigo)
-                        .filter(c => c && c.startsWith('PROD-'))
-                        .map(c => parseInt(c.replace('PROD-', '')))
+                        .filter(c => c && (c.startsWith('PROD-') || c.startsWith('PRD-')))
+                        .map(c => parseInt(c.replace(/^(PROD|PRD)-/, '')))
                         .filter(n => !isNaN(n));
-                    const maxNum = maxCodigo.length ? Math.max(...maxCodigo) : 0;
-                    codigo = `PROD-${String(maxNum + 1).padStart(4, '0')}`;
+                    let maxNum = maxCodigo.length ? Math.max(...maxCodigo) + 1 : 1;
+                    codigo = `PROD-${String(maxNum).padStart(4, '0')}`;
+                    while (existingCodes.has(codigo)) {
+                        maxNum++;
+                        codigo = `PROD-${String(maxNum).padStart(4, '0')}`;
+                    }
                 }
 
                 const data = {
@@ -3433,10 +3519,15 @@
                 async () => {
                     try {
                         const movs = await db.collection('movimientos').where('productoId', '==', id).get();
-                        const batch = db.batch();
-                        movs.forEach(d => batch.delete(d.ref));
-                        batch.delete(db.collection('productos').doc(id));
-                        await batch.commit();
+                        const CHUNK_SIZE = 400;
+                        const docs = movs.docs;
+                        for (let i = 0; i < docs.length; i += CHUNK_SIZE) {
+                            const chunk = docs.slice(i, i + CHUNK_SIZE);
+                            const batch = db.batch();
+                            chunk.forEach(d => batch.delete(d.ref));
+                            await batch.commit();
+                        }
+                        await db.collection('productos').doc(id).delete();
                         showToast('Producto eliminado', 'success');
                     } catch (err) { showToast('Error: ' + err.message, 'error'); }
                 }
@@ -3447,38 +3538,67 @@
         document.getElementById('guardarAjusteBtn').addEventListener('click', async () => {
             const productoId = document.getElementById('ajustarProductoId').value;
             const stockNuevo = parseInt(document.getElementById('ajustarStockNuevo').value);
-            const motivo = document.getElementById('ajustarMotivo').value;
+            const motivo = (document.getElementById('ajustarMotivo').value || '').trim();
 
-            if (isNaN(stockNuevo) || stockNuevo < 0) {
-                showToast('Stock inválido', 'error');
+            if (isNaN(stockNuevo) || stockNuevo < 0 || !Number.isFinite(stockNuevo)) {
+                showToast('Ingresá una cantidad de stock válida mayor o igual a 0', 'error');
                 return;
             }
 
+            const btn = document.getElementById('guardarAjusteBtn');
+            if (btn.disabled) return;
+            const originalBtnText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Ajustando...';
+
             try {
                 const doc = await db.collection('productos').doc(productoId).get();
-                const stockAnterior = doc.data().cantidad;
+                if (!doc.exists) throw new Error('El producto no existe.');
+                const prodData = doc.data();
+                const stockAnterior = prodData.cantidad || 0;
+                const userEmail = currentUser ? currentUser.email : 'admin@stockafm.com';
 
-                await db.collection('productos').doc(productoId).update({
+                const batch = db.batch();
+                batch.update(db.collection('productos').doc(productoId), {
                     cantidad: stockNuevo,
                     fechaEdicion: firebase.firestore.FieldValue.serverTimestamp(),
-                    usuarioEdicion: currentUser.email
+                    usuarioEdicion: userEmail
                 });
 
-                await db.collection('historialEdiciones').add({
+                batch.set(db.collection('historialEdiciones').doc(), {
                     productoId: productoId,
-                    productoNombre: doc.data().nombre,
+                    productoNombre: prodData.nombre,
                     tipo: 'ajuste',
                     cantidadAnterior: stockAnterior,
                     cantidadNueva: stockNuevo,
                     motivo: motivo,
-                    usuario: currentUser.email,
+                    usuario: userEmail,
                     fecha: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
+                // Si hubo cambio de cantidad, registrar movimiento para coherencia del inventario
+                const diff = stockNuevo - stockAnterior;
+                if (diff !== 0) {
+                    batch.set(db.collection('movimientos').doc(), {
+                        productoId: productoId,
+                        productoNombre: prodData.nombre,
+                        tipo: diff > 0 ? 'entrada' : 'salida',
+                        cantidad: Math.abs(diff),
+                        nota: `Ajuste manual de inventario (${stockAnterior} → ${stockNuevo})${motivo ? ': ' + motivo : ''}`,
+                        usuario: userEmail,
+                        fecha: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+
+                await batch.commit();
+
                 bootstrap.Modal.getInstance(document.getElementById('ajustarModal')).hide();
-                showToast('Stock ajustado correctamente', 'success');
+                showToast(`Stock ajustado correctamente a ${stockNuevo} u.`, 'success');
             } catch (err) {
-                showToast('Error: ' + err.message, 'error');
+                showToast('Error al ajustar stock: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalBtnText;
             }
         });
 
@@ -3503,30 +3623,130 @@
             const nombre = btn?.dataset.nombre || 'Producto';
             document.getElementById('historialModalTitle').textContent = `Historial: ${nombre}`;
 
-            const snapshot = await db.collection('movimientos')
-                .where('productoId', '==', productoId)
-                .orderBy('fecha', 'desc')
-                .get();
-
-            const tbody = document.querySelector('#historialTable tbody');
-            if (snapshot.empty) {
-                tbody.innerHTML = '';
-                document.getElementById('sinHistorial').style.display = 'block';
-            } else {
-                document.getElementById('sinHistorial').style.display = 'none';
-                tbody.innerHTML = snapshot.docs.map(doc => {
-                    const m = doc.data();
-                    const fecha = m.fecha ? new Date(m.fecha.seconds * 1000).toLocaleString('es-AR') : '';
-                    const typeLabel = m.tipo === 'creacion' ? 'creación' : m.tipo;
-                    return `<tr>
-                        <td><span class="movement-badge movement-${m.tipo}">${typeLabel}</span></td>
-                        <td>${m.cantidad}</td>
-                        <td><small>${fecha}</small></td>
-                        <td><small>${m.usuario?.split('@')[0] || ''}</small></td>
-                    </tr>`;
-                }).join('');
+            // Resetear a pestaña inicial de movimientos
+            const tabBtn = document.getElementById('tabMovimientosBtn');
+            if (tabBtn) {
+                const bsTab = bootstrap.Tab.getOrCreateInstance(tabBtn);
+                bsTab.show();
             }
+
+            const tbodyMov = document.querySelector('#historialTable tbody');
+            const tbodyEd = document.querySelector('#historialEdicionesTable tbody');
+            const sinMov = document.getElementById('sinHistorial');
+            const sinEd = document.getElementById('sinHistorialEdiciones');
+
+            tbodyMov.innerHTML = '<tr><td colspan="4" class="text-center py-2 text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Cargando movimientos...</td></tr>';
+            tbodyEd.innerHTML = '<tr><td colspan="4" class="text-center py-2 text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Cargando ediciones...</td></tr>';
             historialModal.show();
+
+            try {
+                // 1. Cargar movimientos (evitamos composite index ordenando en cliente)
+                let movList = [];
+                if (movimientos && movimientos.length > 0) {
+                    movList = movimientos.filter(m => m.productoId === productoId);
+                } else {
+                    const snapshot = await db.collection('movimientos').where('productoId', '==', productoId).get();
+                    movList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                }
+
+                movList.sort((a, b) => {
+                    const ta = a.fecha?.seconds || 0;
+                    const tb = b.fecha?.seconds || 0;
+                    return tb - ta;
+                });
+
+                if (movList.length === 0) {
+                    tbodyMov.innerHTML = '';
+                    if (sinMov) sinMov.style.display = 'block';
+                } else {
+                    if (sinMov) sinMov.style.display = 'none';
+                    tbodyMov.innerHTML = movList.map(m => {
+                        const fecha = m.fecha ? new Date(m.fecha.seconds * 1000).toLocaleString('es-AR') : '—';
+                        const typeLabel = m.tipo === 'creacion' ? 'creación' : m.tipo;
+                        const user = m.usuario ? m.usuario.split('@')[0] : '—';
+                        const nota = m.nota ? `<br><small class="text-muted fst-italic">${SearchEngine ? SearchEngine.escapeHTML(m.nota) : m.nota}</small>` : '';
+                        return `<tr>
+                            <td><span class="movement-badge movement-${m.tipo}">${typeLabel}</span></td>
+                            <td><strong>${m.cantidad ?? 0}</strong>${nota}</td>
+                            <td><small>${fecha}</small></td>
+                            <td><small>${user}</small></td>
+                        </tr>`;
+                    }).join('');
+                }
+
+                // 2. Cargar historial de ediciones (sin composite index, orden en cliente)
+                try {
+                    const snapEd = await db.collection('historialEdiciones').where('productoId', '==', productoId).get();
+                    const edList = snapEd.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    edList.sort((a, b) => {
+                        const ta = a.fecha?.seconds || 0;
+                        const tb = b.fecha?.seconds || 0;
+                        return tb - ta;
+                    });
+
+                    if (edList.length === 0) {
+                        tbodyEd.innerHTML = '';
+                        if (sinEd) sinEd.style.display = 'block';
+                    } else {
+                        if (sinEd) sinEd.style.display = 'none';
+                        tbodyEd.innerHTML = edList.map(ed => {
+                            const fecha = ed.fecha ? new Date(ed.fecha.seconds * 1000).toLocaleString('es-AR') : '—';
+                            const user = ed.usuario ? ed.usuario.split('@')[0] : '—';
+                            const tipo = ed.tipo || 'edición';
+                            
+                            let detalle = '';
+                            if (tipo === 'ajuste') {
+                                const cantAnt = ed.cantidadAnterior !== undefined ? ed.cantidadAnterior : '—';
+                                const cantNue = ed.cantidadNueva !== undefined ? ed.cantidadNueva : '—';
+                                detalle = `Stock ajustado: <strong>${cantAnt} → ${cantNue}</strong>`;
+                                if (ed.motivo) detalle += `<br><small class="text-muted">Motivo: ${SearchEngine ? SearchEngine.escapeHTML(ed.motivo) : ed.motivo}</small>`;
+                            } else if (tipo === 'edicion') {
+                                const cambios = [];
+                                const ant = ed.datosAnteriores || {};
+                                const nue = ed.datosNuevos || {};
+                                const campos = [
+                                    { k: 'nombre', l: 'Nombre' },
+                                    { k: 'stockMinimo', l: 'Stock Mín' },
+                                    { k: 'ubicacion', l: 'Ubicación' },
+                                    { k: 'marca', l: 'Marca' },
+                                    { k: 'categoria', l: 'Categoría' },
+                                    { k: 'proveedor', l: 'Proveedor' }
+                                ];
+                                campos.forEach(c => {
+                                    if (ant[c.k] !== undefined && nue[c.k] !== undefined && String(ant[c.k]) !== String(nue[c.k])) {
+                                        cambios.push(`${c.l}: <em>${SearchEngine ? SearchEngine.escapeHTML(String(ant[c.k])) : ant[c.k]}</em> → <strong>${SearchEngine ? SearchEngine.escapeHTML(String(nue[c.k])) : nue[c.k]}</strong>`);
+                                    }
+                                });
+                                detalle = cambios.length ? cambios.join('<br>') : 'Datos del producto actualizados';
+                            } else if (tipo === 'creacion') {
+                                detalle = 'Alta inicial del producto en inventario';
+                            } else {
+                                detalle = 'Registro de auditoría';
+                            }
+
+                            const badgeClass = tipo === 'creacion' ? 'bg-primary' : (tipo === 'ajuste' ? 'bg-warning text-dark' : 'bg-info text-dark');
+
+                            return `<tr>
+                                <td><span class="badge ${badgeClass}">${tipo}</span></td>
+                                <td><small>${detalle}</small></td>
+                                <td><small>${fecha}</small></td>
+                                <td><small>${user}</small></td>
+                            </tr>`;
+                        }).join('');
+                    }
+                } catch(edErr) {
+                    console.warn('No se pudo cargar historialEdiciones:', edErr);
+                    tbodyEd.innerHTML = '';
+                    if (sinEd) {
+                        sinEd.textContent = 'No hay historial de ediciones disponible.';
+                        sinEd.style.display = 'block';
+                    }
+                }
+
+            } catch (err) {
+                console.error('Error al cargar historial:', err);
+                tbodyMov.innerHTML = `<tr><td colspan="4" class="text-danger py-2">Error al cargar movimientos: ${SearchEngine ? SearchEngine.escapeHTML(err.message) : err.message}</td></tr>`;
+            }
         }
 
         let productoPreseleccionado = null;
@@ -3658,33 +3878,50 @@
             const cantidad = Number(document.getElementById('movimientoCantidad').value);
             const nota = document.getElementById('movimientoNota').value.trim();
 
-            const prodRef = db.collection('productos').doc(productoId);
-            const prodDoc = await prodRef.get();
-            if (!prodDoc.exists) { showToast('Producto no encontrado', 'error'); return; }
-            const prod = prodDoc.data();
-
-            if (tipo === 'salida' && prod.cantidad < cantidad) {
-                showToast(`Stock insuficiente. Disponible: ${prod.cantidad}`, 'error'); return;
+            if (isNaN(cantidad) || cantidad <= 0 || !Number.isFinite(cantidad)) {
+                showToast('Ingresá una cantidad válida mayor a 0', 'warning');
+                return;
             }
 
-            const nuevaCantidad = tipo === 'entrada' ? prod.cantidad + cantidad : prod.cantidad - cantidad;
-            const batch = db.batch();
-            batch.update(prodRef, { cantidad: nuevaCantidad });
-            batch.set(db.collection('movimientos').doc(), {
-                productoId,
-                productoNombre: prod.nombre,
-                tipo,
-                cantidad,
-                nota: nota || '',
-                fecha: firebase.firestore.FieldValue.serverTimestamp(),
-                usuario: currentUser.email
-            });
+            const btn = document.getElementById('guardarMovimientoBtn');
+            if (btn.disabled) return;
+            const originalBtnText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Guardando...';
 
             try {
+                const prodRef = db.collection('productos').doc(productoId);
+                const prodDoc = await prodRef.get();
+                if (!prodDoc.exists) { showToast('Producto no encontrado', 'error'); return; }
+                const prod = prodDoc.data();
+
+                if (tipo === 'salida' && prod.cantidad < cantidad) {
+                    showToast(`Stock insuficiente. Disponible: ${prod.cantidad}`, 'error');
+                    return;
+                }
+
+                const nuevaCantidad = tipo === 'entrada' ? prod.cantidad + cantidad : prod.cantidad - cantidad;
+                const batch = db.batch();
+                batch.update(prodRef, { cantidad: nuevaCantidad });
+                batch.set(db.collection('movimientos').doc(), {
+                    productoId,
+                    productoNombre: prod.nombre,
+                    tipo,
+                    cantidad,
+                    nota: nota || '',
+                    fecha: firebase.firestore.FieldValue.serverTimestamp(),
+                    usuario: currentUser ? currentUser.email : 'admin@stockafm.com'
+                });
+
                 await batch.commit();
                 bootstrap.Modal.getInstance(document.getElementById('movimientoModal')).hide();
                 showToast(`${tipo === 'entrada' ? 'Entrada' : 'Salida'} registrada: ${cantidad} u. de ${prod.nombre}`, 'success');
-            } catch (err) { showToast('Error: ' + err.message, 'error'); }
+            } catch (err) {
+                showToast('Error al registrar movimiento: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalBtnText;
+            }
         });
 
         // Limpiar estado al cerrar modales

@@ -119,8 +119,8 @@
             const snap = await db.collection('productos').get();
             const codigos = snap.docs
                 .map(d => d.data().codigo)
-                .filter(c => c && c.startsWith('PRD-'))
-                .map(c => parseInt(c.replace('PRD-', '')))
+                .filter(c => c && (c.startsWith('PRD-') || c.startsWith('PROD-')))
+                .map(c => parseInt(c.replace(/^(PRD|PROD)-/, '')))
                 .filter(n => !isNaN(n));
             proximoCodigo = codigos.length ? Math.max(...codigos) + 1 : 1;
         });
@@ -200,12 +200,14 @@
                 proximoCodigo++;
 
                 productos.push({
+                    _id: 'imp_' + Math.random().toString(36).substr(2, 9),
                     codigo,
                     nombre: nombreLimpio,
                     cantidad: cantidad,
                     ubicacion: '',
                     stockMinimo: stockMinimo,
-                    esStockDesconocido: esStockDesconocido
+                    esStockDesconocido: esStockDesconocido,
+                    seleccionado: true
                 });
             });
 
@@ -214,7 +216,7 @@
 
         function renderPreview() {
             const tbody = document.getElementById('previewTable');
-            const search = document.getElementById('searchPreview').value.toLowerCase();
+            const search = (document.getElementById('searchPreview').value || '').trim().toLowerCase();
             
             const filtered = productosProcesados.filter(p => 
                 p.nombre.toLowerCase().includes(search) || 
@@ -223,102 +225,145 @@
 
             document.getElementById('totalPreview').textContent = filtered.length;
 
-            tbody.innerHTML = filtered.map((p, index) => `
+            tbody.innerHTML = filtered.map(p => `
                 <tr class="${p.esStockDesconocido ? 'unknown' : ''}">
-                    <td><input type="checkbox" class="product-check" data-index="${index}" checked></td>
-                    <td><input type="text" class="form-control form-control-sm edit-codigo" data-index="${index}" value="${p.codigo}" style="width: 100px;"></td>
-                    <td><input type="text" class="form-control form-control-sm edit-nombre" data-index="${index}" value="${p.nombre}"></td>
-                    <td><input type="number" class="form-control form-control-sm edit-cantidad" data-index="${index}" value="${p.cantidad}" min="0" style="width: 80px;"></td>
+                    <td><input type="checkbox" class="product-check" data-id="${p._id}" ${p.seleccionado !== false ? 'checked' : ''}></td>
+                    <td><input type="text" class="form-control form-control-sm edit-codigo" data-id="${p._id}" value="${p.codigo}" style="width: 100px;"></td>
+                    <td><input type="text" class="form-control form-control-sm edit-nombre" data-id="${p._id}" value="${p.nombre}"></td>
+                    <td><input type="number" class="form-control form-control-sm edit-cantidad" data-id="${p._id}" value="${p.cantidad}" min="0" style="width: 80px;"></td>
                     <td>${p.esStockDesconocido ? '<span class="badge bg-warning text-dark badge-stock">Stock desconocido</span>' : ''}</td>
                 </tr>
             `).join('');
 
+            // Vincular checkboxes a cada producto por su ID único
+            tbody.querySelectorAll('.product-check').forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    const id = e.target.dataset.id;
+                    const item = productosProcesados.find(x => x._id === id);
+                    if (item) item.seleccionado = e.target.checked;
+                    actualizarSelectAllHeader();
+                });
+            });
+
             // Guardar cambios al modificar campos
-            document.querySelectorAll('.edit-codigo, .edit-nombre, .edit-cantidad').forEach(input => {
+            tbody.querySelectorAll('.edit-codigo, .edit-nombre, .edit-cantidad').forEach(input => {
                 input.addEventListener('change', (e) => {
-                    const idx = parseInt(e.target.dataset.index);
+                    const id = e.target.dataset.id;
+                    const item = productosProcesados.find(x => x._id === id);
+                    if (!item) return;
                     if (e.target.classList.contains('edit-codigo')) {
-                        productosProcesados[idx].codigo = e.target.value;
+                        item.codigo = e.target.value.trim();
                     } else if (e.target.classList.contains('edit-nombre')) {
-                        productosProcesados[idx].nombre = e.target.value;
+                        item.nombre = e.target.value.trim();
                     } else if (e.target.classList.contains('edit-cantidad')) {
-                        productosProcesados[idx].cantidad = parseInt(e.target.value) || 0;
+                        item.cantidad = Math.max(0, parseInt(e.target.value) || 0);
                     }
                 });
             });
 
-            document.getElementById('selectAll').checked = true;
+            actualizarSelectAllHeader();
+        }
+
+        function actualizarSelectAllHeader() {
+            const selectAllEl = document.getElementById('selectAll');
+            if (!selectAllEl) return;
+            const itemsVisibles = document.querySelectorAll('.product-check');
+            if (itemsVisibles.length === 0) {
+                selectAllEl.checked = false;
+            } else {
+                selectAllEl.checked = Array.from(itemsVisibles).every(cb => cb.checked);
+            }
         }
 
         document.getElementById('searchPreview').addEventListener('input', renderPreview);
 
         document.getElementById('selectAll').addEventListener('change', (e) => {
-            document.querySelectorAll('.product-check').forEach(cb => cb.checked = e.target.checked);
+            const isChecked = e.target.checked;
+            const search = (document.getElementById('searchPreview').value || '').trim().toLowerCase();
+            productosProcesados.forEach(p => {
+                if (!search || p.nombre.toLowerCase().includes(search) || p.codigo.toLowerCase().includes(search)) {
+                    p.seleccionado = isChecked;
+                }
+            });
+            document.querySelectorAll('.product-check').forEach(cb => cb.checked = isChecked);
         });
 
         document.getElementById('selectAllBtn').addEventListener('click', () => {
-            const allChecked = Array.from(document.querySelectorAll('.product-check')).every(cb => cb.checked);
-            document.querySelectorAll('.product-check').forEach(cb => cb.checked = !allChecked);
+            const allChecked = productosProcesados.every(p => p.seleccionado !== false);
+            const newState = !allChecked;
+            productosProcesados.forEach(p => p.seleccionado = newState);
+            document.querySelectorAll('.product-check').forEach(cb => cb.checked = newState);
+            const selectAllEl = document.getElementById('selectAll');
+            if (selectAllEl) selectAllEl.checked = newState;
         });
 
         document.getElementById('importBtn').addEventListener('click', async () => {
-            const checkboxes = document.querySelectorAll('.product-check:checked');
-            const indices = Array.from(checkboxes).map(cb => parseInt(cb.dataset.index));
+            const itemsToImport = productosProcesados.filter(p => p.seleccionado !== false);
             
-            if (indices.length === 0) { alert('Seleccioná al menos un producto'); return; }
+            if (itemsToImport.length === 0) { alert('Seleccioná al menos un producto'); return; }
 
             const btn = document.getElementById('importBtn');
             btn.classList.add('loading');
             btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Importando...';
 
-            // Obtener códigos existentes
-            const existingSnap = await db.collection('productos').get();
-            const existingCodes = new Set(existingSnap.docs.map(d => d.data().codigo));
+            try {
+                // Obtener códigos existentes
+                const existingSnap = await db.collection('productos').get();
+                const existingCodes = new Set(existingSnap.docs.map(d => d.data().codigo));
 
-            let maxCodigo = existingSnap.docs
-                .map(d => d.data().codigo)
-                .filter(c => c && c.startsWith('PRD-'))
-                .map(c => parseInt(c.replace('PRD-', '')))
-                .filter(n => !isNaN(n));
-            let nextCode = maxCodigo.length ? Math.max(...maxCodigo) + 1 : 1;
+                let maxCodigo = existingSnap.docs
+                    .map(d => d.data().codigo)
+                    .filter(c => c && (c.startsWith('PRD-') || c.startsWith('PROD-')))
+                    .map(c => parseInt(c.replace(/^(PRD|PROD)-/, '')))
+                    .filter(n => !isNaN(n));
+                let nextCode = maxCodigo.length ? Math.max(...maxCodigo) + 1 : 1;
 
-            const batch = db.batch();
-            let importedCount = 0;
+                // Procesar en chunks de 400 operaciones para respetar el límite de 500 de Firestore
+                const CHUNK_SIZE = 400;
+                let importedCount = 0;
 
-            for (const idx of indices) {
-                let p = productosProcesados[idx];
-                let codigo = p.codigo;
+                for (let i = 0; i < itemsToImport.length; i += CHUNK_SIZE) {
+                    const chunk = itemsToImport.slice(i, i + CHUNK_SIZE);
+                    const batch = db.batch();
 
-                // Si el código ya existe, generar uno nuevo
-                while (existingCodes.has(codigo)) {
-                    codigo = `PRD-${String(nextCode).padStart(4, '0')}`;
-                    nextCode++;
+                    for (const p of chunk) {
+                        let codigo = p.codigo;
+                        while (existingCodes.has(codigo)) {
+                            codigo = `PRD-${String(nextCode).padStart(4, '0')}`;
+                            nextCode++;
+                        }
+
+                        const ref = db.collection('productos').doc();
+                        batch.set(ref, {
+                            codigo: codigo,
+                            nombre: p.nombre,
+                            cantidad: p.cantidad,
+                            ubicacion: p.ubicacion || '',
+                            stockMinimo: p.stockMinimo,
+                            stockDesconocido: p.esStockDesconocido || false,
+                            categoria: 'Otros',
+                            marca: '',
+                            proveedor: '',
+                            notas: '',
+                            fechaCreacion: firebase.firestore.FieldValue.serverTimestamp(),
+                            usuarioCreacion: currentUser ? currentUser.email : ''
+                        });
+                        existingCodes.add(codigo);
+                        importedCount++;
+                    }
+
+                    await batch.commit();
                 }
 
-                const ref = db.collection('productos').doc();
-                batch.set(ref, {
-                    codigo: codigo,
-                    nombre: p.nombre,
-                    cantidad: p.cantidad,
-                    ubicacion: '',
-                    stockMinimo: p.stockMinimo,
-                    stockDesconocido: p.esStockDesconocido
-                });
-                existingCodes.add(codigo);
-                importedCount++;
-            }
-
-            try {
-                await batch.commit();
                 document.getElementById('importedCount').textContent = importedCount;
                 document.getElementById('resultCard').style.display = 'block';
                 document.getElementById('previewCard').style.display = 'none';
             } catch (err) {
-                alert('Error: ' + err.message);
+                alert('Error al importar: ' + err.message);
+            } finally {
+                btn.classList.remove('loading');
+                btn.innerHTML = '<i class="bi bi-cloud-upload me-1"></i> Importar a Firebase';
             }
-
-            btn.classList.remove('loading');
-            btn.innerHTML = '<i class="bi bi-cloud-upload me-1"></i> Importar a Firebase';
         });
     </script>
 </body>

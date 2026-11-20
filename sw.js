@@ -1,8 +1,9 @@
-const CACHE_NAME = 'stockafm-v2';
+const CACHE_NAME = 'stockafm-v3';
 const urlsToCache = [
   './',
   './index.html',
   './manifest.json',
+  './search_engine.js',
   './importar.html'
 ];
 
@@ -30,6 +31,9 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+  // Ignorar peticiones que no sean GET (como escrituras a Firestore o auth)
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
     fetch(event.request)
       .then(response => {

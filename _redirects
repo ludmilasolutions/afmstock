@@ -1,4 +1,5 @@
 # Excluir archivos estáticos del SPA redirect
+/importar /importar.html 200
 /js/*     /js/:splat  200
 /css/*    /css/:splat 200
 /assets/* /assets/:splat 200
